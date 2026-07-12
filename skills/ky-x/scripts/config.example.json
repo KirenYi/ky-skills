@@ -1,0 +1,20 @@
+{
+  "output_dir": "~/.ky-x/data",
+  "source": "nitter_rss",
+  "nitter_instances": [
+    "https://nitter.net"
+  ],
+  "request_timeout_sec": 25,
+  "request_delay_sec": 1.0,
+  "filters": {
+    "include_replies": false,
+    "include_retweets": false,
+    "include_quotes": true
+  },
+  "authors": [
+    {
+      "handle": "dontbesilent",
+      "note": "示例：改成你要跟的博主"
+    }
+  ]
+}
