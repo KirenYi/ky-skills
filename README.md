@@ -8,10 +8,11 @@
 
 | Skill | 说明 | 状态 |
 |-------|------|------|
-| [`ky-x`](./skills/ky-x/) | 把 X（Twitter）博主公开帖子增量归档到本地（JSONL + Markdown） | ✅ v0.1（集合内第一个 skill） |
-| `ky-*` | 后续能力将继续以 `ky-` 前缀加入本仓库 | 规划中 |
+| [`ky-x`](./skills/ky-x/) | 把 X（Twitter）博主公开帖子增量归档到本地（JSONL + Markdown） | ✅ |
+| [`ky-wechat-html`](./skills/ky-wechat-html/) | Markdown → 微信公众号可粘贴 HTML（KY 原创风格） | ✅ |
+| `ky-*` | 后续能力继续以 `ky-` 前缀加入 | 规划中 |
 
-> **v0.1 说明**：当前公开发布的完整实现是 `ky-x`。本仓库从一开始就按「多 skill 集合」设计，不是单功能脚本项目。
+> 本仓库是 **多 skill 集合**。先落地的是 `ky-x` 与 `ky-wechat-html`，结构上可继续扩展。
 
 ---
 

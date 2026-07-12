@@ -24,6 +24,28 @@
 
 ---
 
+## 2026-07-12 — Grok — 新增 ky-wechat-html
+
+- **操作者**：Grok
+- **目标**：借鉴 dbs-wechat-html 的核心结构，写成 KY 自有公众号 HTML skill（非全文抄袭）
+- **已完成**：
+  - 新增 `skills/ky-wechat-html/`（SKILL.md + 8 套原创风格 styles.md）
+  - 输出目录 `ky-公众号HTML/`、风格 id 独立命名
+  - 更新根 README skill 表；`install-links` 可挂多端
+- **改动路径**：
+  - `skills/ky-wechat-html/**`
+  - `README.md`
+  - `docs/PROGRESS.md`
+- **验证**：
+  - 目录结构完整；`./scripts/install-links.sh ky-wechat-html`
+- **未完成 / 下一步**：
+  - 可选：Python 渲染脚本提高长文稳定性
+  - 人类用真实 MD 试跑一轮排版
+- **风险或注意**：
+  - 当前仍为 Agent 按规则生成 HTML（与参考 skill 同类），长文依赖模型遵守规则
+
+---
+
 ## 2026-07-12 — Grok — 多 Agent 协作文档 + 跨端安装
 
 - **操作者**：Grok
