@@ -8,6 +8,8 @@ Thanks for interest in **ky-skills** (Kiren Yi).
 - Prefer small, reviewable PRs.
 - Do not commit personal archives, tokens, or `config.json` with secrets.
 - Document user-facing behavior in the skill’s `SKILL.md` and root `README.md`.
+- **Multi-agent**: read [`AGENTS.md`](./AGENTS.md) and append to [`docs/PROGRESS.md`](./docs/PROGRESS.md) after meaningful work.
+- **Source of truth**: edit `skills/` in this repo, not copies under `~/.claude/skills` etc.
 
 ## Local setup
 

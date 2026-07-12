@@ -4,27 +4,32 @@
 
 统一前缀：`ky-`（Kiren Yi）
 
-用 Claude Code / Codex / Grok / 豆包 等 Agent 时，安装本仓库后即可通过 `/ky-x` 这类命令调用对应能力。
+用 **Claude Code、Codex、Grok、豆包、Trae** 等支持 Skills 的工具时，安装本仓库后即可通过 `/ky-x` 这类命令调用对应能力——**同一套 skill，多端共用**。
 
 | Skill | 说明 | 状态 |
 |-------|------|------|
-| [`ky-x`](./skills/ky-x/) | 把 X（Twitter）博主公开帖子增量归档到本地（JSONL + Markdown） | ✅ v0.1 |
+| [`ky-x`](./skills/ky-x/) | 把 X（Twitter）博主公开帖子增量归档到本地（JSONL + Markdown） | ✅ v0.1（集合内第一个 skill） |
+| `ky-*` | 后续能力将继续以 `ky-` 前缀加入本仓库 | 规划中 |
+
+> **v0.1 说明**：当前公开发布的完整实现是 `ky-x`。本仓库从一开始就按「多 skill 集合」设计，不是单功能脚本项目。
 
 ---
 
 ## 这是什么
 
-这不是一个网页 App，而是一套 **可安装的 Agent Skill**：
+这不是一个网页 App，而是一套 **可安装的 Agent Skill 集合**：
 
 1. **给人看的文档**（本 README）
-2. **给 Agent 看的说明**（每个 skill 目录下的 `SKILL.md`）
-3. **真正干活的脚本**（如 `ky-x` 里的 Python 包）
+2. **给所有 Agent 看的协作规则**（[`AGENTS.md`](./AGENTS.md)）与进度板（[`docs/PROGRESS.md`](./docs/PROGRESS.md)）
+3. **给 Agent 看的单 skill 说明**（`skills/*/SKILL.md`）
+4. **真正干活的脚本**（如 `ky-x` 里的 Python 包）
 
 设计目标：
 
-- **有品牌**：前缀固定为 `ky-`，方便用户记忆「这是 Kiren Yi 的工具」
-- **可扩展**：新能力以 `ky-<name>` 形式加入 `skills/`
-- **可落地**：装上就能跑，不强制先申请 X API
+- **有品牌**：前缀固定为 `ky-`（Kiren Yi）
+- **多 skill**：下载 X 推文只是集合中的一员（`ky-x`）
+- **多宿主**：一份 git 真源，软链到各 Agent，避免多端分叉
+- **可落地**：装上就能跑；`ky-x` 不强制先申请 X API
 
 ---
 
@@ -56,26 +61,25 @@ cd ~/ky-skills
 ./scripts/install-links.sh
 ```
 
-这会把 `skills/ky-*` 链到：
+这会把 `skills/ky-*` **软链**到本机已存在的多端 skills 目录，例如：
 
-- `~/.agents/skills/`
-- `~/.claude/skills/`
-- `~/.codex/skills/`
-- `~/.grok/skills/`
+- `~/.agents/skills/` — 豆包 Mac、Trae Solo、通用 Agents
+- `~/.claude/skills/` — Claude Code
+- `~/.codex/skills/` — Codex
+- `~/.grok/skills/` — Grok
+- `~/.trae/skills/`、`~/.trae-cn/skills/` — Trae（若存在）
+- 以及其他常见兼容目录（见 [`docs/MULTI_HOST.md`](./docs/MULTI_HOST.md)）
 
 只装某一个：
 
 ```bash
 ./scripts/install-links.sh ky-x
+./scripts/install-links.sh --dry-run   # 只预览
 ```
 
-手动示例：
+原理：**只维护一份仓库真源**，各工具通过软链引用，改一处多端同步。不要把 skill 复制到各端再分别改。
 
-```bash
-ln -sfn ~/ky-skills/skills/ky-x ~/.agents/skills/ky-x
-```
-
-### 3. 在 Agent 里调用
+### 3. 在任意已安装的 Agent 里调用
 
 ```text
 /ky-x
@@ -158,20 +162,33 @@ python3 -m xarchive status -c ~/.ky-x/config.json
 
 ```text
 ky-skills/
-├── README.md                 # 你正在读的说明
-├── LICENSE                   # MIT
-├── VERSION                   # 集合版本
+├── README.md                 # 人类用户说明
+├── AGENTS.md                 # 多 Agent 协作总则（Claude/Codex/Grok… 都读）
+├── CLAUDE.md                 # Claude Code 薄兼容层 → AGENTS.md
+├── SOURCE_OF_TRUTH.md        # 真源层级
+├── CONTRIBUTING.md
+├── LICENSE / VERSION
+├── docs/
+│   ├── PROGRESS.md           # 跨工具进度板（改完必写）
+│   ├── COLLABORATION.md      # 协作流程
+│   └── MULTI_HOST.md         # 多端安装细节
 ├── scripts/
-│   └── install-links.sh      # 多端软链安装
+│   └── install-links.sh      # 一键多端软链
 ├── skills/
-│   └── ky-x/                 # 单个 skill（可独立软链）
-│       ├── SKILL.md          # Agent 行为说明（核心）
-│       ├── README.md
-│       ├── VERSION
-│       ├── scripts/          # 可执行逻辑
-│       └── references/       # 数据源 / 路线图 / changelog
-└── templates/                # 新建 ky-* 的骨架
+│   └── ky-x/                 # 集合内 skill（可继续增加 ky-*）
+│       ├── SKILL.md
+│       ├── scripts/
+│       └── references/
+└── templates/                # 新建 ky-* 骨架
 ```
+
+### 给「会改这个仓库的 Agent」
+
+| 文件 | 用途 |
+|------|------|
+| [`AGENTS.md`](./AGENTS.md) | 开工必读：真源、纪律、安全 |
+| [`docs/PROGRESS.md`](./docs/PROGRESS.md) | 跨 Claude / Codex / Grok 同步进度 |
+| [`docs/COLLABORATION.md`](./docs/COLLABORATION.md) | 协作与 WIP 占坑约定 |
 
 ---
 
