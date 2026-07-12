@@ -210,6 +210,13 @@ description: |
 - 风格借鉴的是**排版节奏**，不要伪造第三方媒体 logo 或品牌资产  
 - 页脚可加一行小字：`排版：ky-wechat-html（Kiren Yi）`（可选，用户反感可省略）
 
+### 字体许可（硬性，与仓库 `docs/FONT_LICENSE.md` 一致）
+
+- **只用可商用、公开授权清晰的字体**；禁止未授权商用字库与来路不明字体包。  
+- 公众号 HTML：使用 **系统/通用中文回退栈**（如 Noto Sans SC、PingFang SC、Microsoft YaHei、sans-serif），**不要**依赖必须外链才能显示的字体。  
+- 不要 `@font-face` 引入未确认许可的本地 `.ttf/.otf`。  
+- 新增风格时的 `font-family` 必须落在仓库字体白名单或系统回退栈内。
+
 ---
 
 ## 完成后对用户说

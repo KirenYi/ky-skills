@@ -24,6 +24,22 @@
 
 ---
 
+## 2026-07-12 — Grok — 字体商用许可硬约束
+
+- **操作者**：Grok
+- **目标**：封面/排版统一「可公开、可商用、无侵权风险」字体策略
+- **已完成**：
+  - 新增 `docs/FONT_LICENSE.md`（白名单 + 禁止项 + 检查清单）
+  - `AGENTS.md`、`ky-wechat-html` SKILL / styles 引用该约束
+  - 封面测试说明补充字体条款
+- **改动路径**：
+  - `docs/FONT_LICENSE.md`、`AGENTS.md`、`skills/ky-wechat-html/**`、用户云盘测试说明
+- **验证**：文档交叉引用存在
+- **未完成 / 下一步**：正式 `ky-cover` 时默认 Noto 渲染管线
+- **风险或注意**：系统字体栈用于本机光栅化位图通常不构成分发字体文件；若未来打包 .ttf 必须只用 OFL 并附 LICENSE
+
+---
+
 ## 2026-07-12 — Grok — ky-wechat-html 扩充 5 套风格
 
 - **操作者**：Grok
