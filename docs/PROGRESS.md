@@ -24,6 +24,24 @@
 
 ---
 
+## 2026-07-12 — Grok — ky-wechat-html 扩充 5 套风格
+
+- **操作者**：Grok
+- **目标**：调研公开排版范式后，扩展 KY 风格库并保持微信兼容
+- **已完成**：
+  - 新增 `ink` / `cream` / `swiss` / `night` / `fresh`（styles.md + SKILL 表）
+  - 版本 0.2.0，changelog 更新
+- **改动路径**：
+  - `skills/ky-wechat-html/templates/styles.md`
+  - `skills/ky-wechat-html/SKILL.md`
+  - `skills/ky-wechat-html/VERSION`
+  - `skills/ky-wechat-html/references/changelog.md`
+- **验证**：styles.md 含 13 个 `## id ·` 段落
+- **未完成 / 下一步**：用户可指定把新风格跑进纳瓦尔文稿预览
+- **风险或注意**：`night` 暗色在部分公众号外壳下观感可能被冲淡
+
+---
+
 ## 2026-07-12 — Grok — 新增 ky-wechat-html
 
 - **操作者**：Grok

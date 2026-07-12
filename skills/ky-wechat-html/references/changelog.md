@@ -1,5 +1,11 @@
 # ky-wechat-html Changelog
 
+## 0.2.0 — 2026-07-12
+
+- 新增 5 套风格：`ink` 宣纸、`cream` 奶刊、`swiss` 网格、`night` 夜读、`fresh` 青芽
+- 全量风格 8 → **13**
+- 灵感来自 newsletter / 人文宣纸 / Swiss / 暗色阅读 / 国内小清新等公开设计范式，KY 自研色板与命名
+
 ## 0.1.0 — 2026-07-12
 
 - 首发：Markdown → 微信公众号 HTML
