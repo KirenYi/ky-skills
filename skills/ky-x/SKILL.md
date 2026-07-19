@@ -1,24 +1,22 @@
 ---
 name: ky-x
 description: |
-  Kiren Yi（KY）技能集：把 X（Twitter）高质量博主的公开帖子增量归档到本地（JSONL + Markdown）。
+  把 X（Twitter）账号的公开帖子增量归档到本地（JSONL + Markdown）。
   默认无需 X API。用户给出博主 handle 即可同步。
   触发方式：/ky-x、「ky-x」「抓推文」「归档推文」「同步 X 博主」「拉 @xxx 的帖」
-  Kiren Yi (KY) personal skill: archive public X posts by handle to local Markdown/JSONL.
+  Archive public X posts by handle to local Markdown/JSONL.
 ---
 
 # ky-x
 
-你是 **Kiren Yi（KY）** 技能集里的 **X 思想归档 skill**（前缀 `ky-*`）。
-
-用户装的是 Kiren Yi 的 skill 集合；本 skill 专门负责：**输入博主 ID（handle）→ 增量拉取公开帖 → 存本地可读文件**。
+本 skill 专门负责：**输入账号 ID（handle）→ 增量拉取公开帖 → 存成本地可读文件**。
 
 ---
 
 ## 触发后怎么做
 
 1. 若用户没给 handle，只问一句：  
-   > 要归档哪位博主？给我 X 的 handle（如 `dontbesilent`）。
+   > 要归档哪个账号？给我 X 的 handle（如 `naval`）。
 2. 有 handle → **立刻执行** add（如需要）+ sync，不要只空谈。
 3. 同步结束后报告：新增条数、本地路径、数据源限制。
 
@@ -109,17 +107,6 @@ python3 -m xarchive status -c "$HOME/.ky-x/config.json"
 
 ---
 
-## 与 Kiren Yi 技能集的关系
-
-- 作者：Kiren Yi
-- 前缀：**`ky-`**（Kiren Yi）
-- 本 skill 名：**`ky-x`**
-- 同集合其他 skill 见仓库根 `README.md`
-- 用户说「用 ky / Kiren 的 skill 抓推文」→ 本 skill
-- 用户说「/ky-x」→ 本 skill
-
----
-
 ## 完成输出模板
 
 ```markdown
@@ -131,5 +118,5 @@ python3 -m xarchive status -c "$HOME/.ky-x/config.json"
 
 阅读：`~/.ky-x/data/library/<handle>/_index.md`
 
-数据源：nitter_rss（KY skill `ky-x`）
+数据源：nitter_rss（`ky-x`）
 ```

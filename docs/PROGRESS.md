@@ -24,6 +24,33 @@
 
 ---
 
+## 2026-07-19 07:11 PDT — Codex — 精简公开介绍并移除测试账号
+
+- **操作者**：Codex
+- **目标**：精简仓库与 Skill 的公开说明，移除早期测试账号及与功能无关的个人化介绍
+- **已完成**：
+  - 将根 README 收敛为项目功能、安装、使用与限制说明
+  - 从文档、示例配置和初始化逻辑中移除早期测试账号；必要示例统一为 `naval`
+  - 清理 `ky-x` 与 `ky-wechat-html` 中会外显的署名、品牌解释和 HTML 标题后缀
+  - 同步版本号、变更记录与 `ky-x` 命令行帮助文本
+- **改动路径**：
+  - `README.md`、`VERSION`
+  - `skills/ky-x/**`
+  - `skills/ky-wechat-html/**`
+  - `docs/PROGRESS.md`
+- **验证**：
+  - `git diff --check`
+  - `python3 -m xarchive --help`、`python3 -m xarchive --version`
+  - 临时目录执行 `python3 -m xarchive init` 并通过 JSON 校验
+  - `./scripts/install-links.sh --dry-run`
+  - 全仓搜索确认早期测试账号无命中
+- **未完成 / 下一步**：
+  - 用户确认后推送远端
+- **风险或注意**：
+  - `.gitignore` 继续保留旧版数据目录规则，防止历史用户数据被误提交
+
+---
+
 ## 2026-07-12 — Grok — 出镜封面规则 v2（竖屏修正 / 横屏暂缓）
 
 - **操作者**：Grok

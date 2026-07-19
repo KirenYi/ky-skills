@@ -47,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_list = sub.add_parser("list", parents=[common], help="列出配置中的博主")
     p_list.set_defaults(func=cmd_list)
 
-    p_init = sub.add_parser("init", parents=[common], help="创建用户配置（默认 ~/.x-thought-archive）")
+    p_init = sub.add_parser("init", parents=[common], help="创建用户配置（默认 ~/.ky-x）")
     p_init.set_defaults(func=cmd_init)
 
     return parser
@@ -123,7 +123,7 @@ def cmd_init(args: argparse.Namespace) -> int:
             "include_quotes": True,
         },
         "authors": [
-            {"handle": "dontbesilent", "note": "示例：改成你要跟的博主"}
+            {"handle": "naval", "note": "示例：改成你要跟的博主"}
         ],
     }
     example = Path(__file__).resolve().parent.parent / "config.example.json"

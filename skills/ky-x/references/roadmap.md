@@ -1,6 +1,6 @@
 # 路线图（ky-x）
 
-属于 **KY 技能集**（前缀 `ky-`）。按「先能用、再变稳、再变强」迭代。
+按「先能用、再变稳、再变强」迭代。
 
 ## v0.1（当前）
 
@@ -16,7 +16,7 @@
 ## v0.2
 
 - [ ] 一键安装脚本（clone + 软链到 `~/.agents/skills` 等）  
-- [ ] `output_dir` 默认 `~/.x-thought-archive/data`（init 时写绝对路径）  
+- [x] `output_dir` 默认 `~/.ky-x/data`（init 时写绝对路径）
 - [ ] `sync --handle xxx` 只同步一个人  
 - [ ] 更稳的镜像列表 / 健康检查命令 `xarchive doctor`  
 - [ ] macOS launchd / Linux systemd 示例  

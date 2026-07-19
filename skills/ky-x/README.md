@@ -1,6 +1,6 @@
 # ky-x
 
-**Kiren Yi（KY）** 个人技能集中的 **X 推文归档** skill。
+将 X（Twitter）账号的公开帖子增量归档到本地。
 
 - 调用名：`/ky-x`
 - 作用：输入博主 handle → 本地 JSONL + Markdown
@@ -13,6 +13,6 @@
 ```bash
 export PYTHONPATH=/path/to/ky-skills/skills/ky-x/scripts
 python3 -m xarchive init -c ~/.ky-x/config.json
-python3 -m xarchive add dontbesilent -c ~/.ky-x/config.json
-python3 -m xarchive sync --handle dontbesilent -c ~/.ky-x/config.json
+python3 -m xarchive add naval -c ~/.ky-x/config.json
+python3 -m xarchive sync --handle naval -c ~/.ky-x/config.json
 ```

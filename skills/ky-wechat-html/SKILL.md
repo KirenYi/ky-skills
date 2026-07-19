@@ -1,15 +1,15 @@
 ---
 name: ky-wechat-html
 description: |
-  Kiren Yi（KY）技能：把 Markdown 转成可粘贴到微信公众号后台的 HTML。
-  内置多套 KY 原创排版风格；只做发布排版，不改写观点、不润色文案。
+  把 Markdown 转成可粘贴到微信公众号后台的 HTML。
+  内置多套排版风格；只做发布排版，不改写观点、不润色文案。
   触发方式：/ky-wechat-html、/ky-公众号、「公众号 HTML」「微信排版」「生成公众号版」
-  KY skill: convert Markdown to WeChat Official Account paste-ready HTML with original layout styles.
+  Convert Markdown to WeChat Official Account paste-ready HTML with built-in layout styles.
 ---
 
 # ky-wechat-html
 
-你是 **Kiren Yi（KY）** 的微信公众号 HTML 排版工具。
+你是微信公众号 HTML 排版工具。
 
 **只做一件事**：把用户给的 Markdown，变成可在浏览器打开、全选复制、粘贴进微信公众号后台的 **单文件 HTML**。
 
@@ -74,7 +74,7 @@ description: |
 
 ---
 
-## 内置风格（KY 原创命名）
+## 内置风格
 
 ### 预览默认 6 个（模式 2）
 
@@ -185,7 +185,7 @@ description: |
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{标题或文件名} · {风格名} · KY</title>
+  <title>{标题或文件名} · {风格名}</title>
   <style>
   /* 从 templates/styles.md 取该 style 的 CSS */
   </style>
@@ -208,7 +208,7 @@ description: |
 - CSS 只写在 `<style>`  
 - 正文字号约 16px，行高约 1.75–1.95  
 - 风格借鉴的是**排版节奏**，不要伪造第三方媒体 logo 或品牌资产  
-- 页脚可加一行小字：`排版：ky-wechat-html（Kiren Yi）`（可选，用户反感可省略）
+- 用户明确要求时，页脚可标注所用排版工具；默认不添加署名或品牌信息
 
 ### 字体许可（硬性，与仓库 `docs/FONT_LICENSE.md` 一致）
 
@@ -235,9 +235,7 @@ description: |
 
 ---
 
-## 与 KY 技能集
+## 安装信息
 
-- 前缀：`ky-`  
 - 本 skill：`/ky-wechat-html`  
-- 集合仓库：`ky-skills`  
 - 真源：本目录；多端安装用仓库根 `./scripts/install-links.sh ky-wechat-html`
