@@ -21,20 +21,19 @@
 
 ## 安装
 
-```bash
-git clone https://github.com/KirenYi/ky-skills.git ~/ky-skills
-cd ~/ky-skills
-./scripts/install-links.sh
+直接把这句话发给 Codex、Claude Code 或其他 Agent：
+
+```text
+帮我安装这里的 Skills：https://github.com/KirenYi/ky-skills
 ```
 
-安装单个 Skill：
+安装完成后重启 Agent，就可以使用了。
+
+如果 Agent 无法安装，再打开终端运行：
 
 ```bash
-./scripts/install-links.sh ky-x
-./scripts/install-links.sh ky-wechat-html
+curl -fsSL https://github.com/KirenYi/ky-skills/raw/main/install.sh|bash
 ```
-
-安装脚本会将 Skill 软链接到本机已有的兼容目录。不同工具的目录说明见 [`docs/MULTI_HOST.md`](./docs/MULTI_HOST.md)。
 
 ## 使用 ky-x
 
@@ -48,7 +47,7 @@ cd ~/ky-skills
 也可以直接使用命令行：
 
 ```bash
-export PYTHONPATH=~/ky-skills/skills/ky-x/scripts
+export PYTHONPATH=~/.ky-skills/skills/ky-x/scripts
 
 python3 -m xarchive init -c ~/.ky-x/config.json
 python3 -m xarchive add naval -c ~/.ky-x/config.json

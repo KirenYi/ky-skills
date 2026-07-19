@@ -24,6 +24,34 @@
 
 ---
 
+## 2026-07-19 07:23 PDT — Codex — 增加一行命令安装入口
+
+- **操作者**：Codex
+- **目标**：让非技术用户无需理解 Git 和目录结构即可安装或更新 Skills
+- **已完成**：
+  - 将“把仓库链接发给 Agent，让 Agent 自动安装”设为首选入口
+  - 新增根目录 `install.sh`，一条命令自动下载、更新并连接 Skills
+  - 在没有 Git 时自动使用 GitHub 压缩包安装
+  - 为链接脚本增加简洁输出模式和隔离测试目录支持
+  - 将 README 安装入口改为可直接复制的一行命令
+- **改动路径**：
+  - `install.sh`
+  - `scripts/install-links.sh`
+  - `README.md`
+  - `docs/MULTI_HOST.md`
+  - `VERSION`
+  - `docs/PROGRESS.md`
+- **验证**：
+  - `bash -n install.sh scripts/install-links.sh`
+  - 在 `/tmp` 隔离环境验证首次安装、重复更新、安装全部与只安装 `ky-x`
+  - 验证生成的多宿主链接均指向受管安装目录
+- **未完成 / 下一步**：
+  - 无
+- **风险或注意**：
+  - 一键安装依赖 GitHub 可访问；失败时用户可让 Agent 按仓库 README 手动安装
+
+---
+
 ## 2026-07-19 07:11 PDT — Codex — 精简公开介绍并移除测试账号
 
 - **操作者**：Codex
