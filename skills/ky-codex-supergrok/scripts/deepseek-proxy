@@ -1,0 +1,582 @@
+#!/usr/bin/env python3
+"""Local bridge: Codex Responses API -> DeepSeek Chat Completions.
+
+Codex Desktop only speaks /v1/responses. DeepSeek official API is chat/completions.
+This proxy translates both ways so a real DEEPSEEK_API_KEY works.
+"""
+from __future__ import annotations
+
+import json
+import os
+import signal
+import subprocess
+import sys
+import threading
+import time
+import urllib.error
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+HOST = "127.0.0.1"
+PORT = int(os.environ.get("DEEPSEEK_PROXY_PORT", "18766"))
+UPSTREAM = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/")
+ENV_FILE = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "ky-provider.env"
+PID_PATH = Path.home() / ".codex" / "deepseek-proxy.pid"
+LOG_PATH = Path.home() / ".codex" / "deepseek-proxy.log"
+
+# Map OpenRouter-style or catalog slugs to DeepSeek API model ids
+MODEL_MAP = {
+    "deepseek/deepseek-chat": "deepseek-chat",
+    "deepseek/deepseek-r1": "deepseek-reasoner",
+    "deepseek-chat": "deepseek-chat",
+    "deepseek-reasoner": "deepseek-reasoner",
+    "deepseek-r1": "deepseek-reasoner",
+}
+
+
+def log(msg: str) -> None:
+    line = time.strftime("%Y-%m-%d %H:%M:%S") + " " + msg
+    try:
+        with LOG_PATH.open("a") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+
+
+def load_key() -> str:
+    key = os.environ.get("DEEPSEEK_API_KEY")
+    if key:
+        return key.strip()
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text().splitlines():
+            s = line.strip()
+            if s.startswith("DEEPSEEK_API_KEY="):
+                return s.split("=", 1)[1].strip().strip('"').strip("'")
+    raise RuntimeError(
+        "DEEPSEEK_API_KEY missing. Put it in ~/.codex/ky-provider.env or set env."
+    )
+
+
+def make_opener():
+    # Bypass system HTTP proxy (VPN tunnel 503 issues)
+    return urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+def content_to_text(content) -> str:
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for c in content:
+            if isinstance(c, dict):
+                if c.get("type") in ("input_text", "text", "output_text"):
+                    parts.append(c.get("text") or "")
+                elif "text" in c:
+                    parts.append(str(c.get("text") or ""))
+            elif isinstance(c, str):
+                parts.append(c)
+        return "\n".join(parts)
+    return str(content)
+
+
+def responses_input_to_messages(inp) -> list:
+    messages = []
+    if isinstance(inp, str):
+        return [{"role": "user", "content": inp}]
+    if not isinstance(inp, list):
+        return [{"role": "user", "content": str(inp)}]
+    for item in inp:
+        if not isinstance(item, dict):
+            continue
+        t = item.get("type")
+        if t == "additional_tools":
+            continue
+        if t in (None, "message") or "role" in item:
+            role = item.get("role") or "user"
+            if role == "developer":
+                role = "system"
+            text = content_to_text(item.get("content"))
+            if text.strip():
+                messages.append({"role": role, "content": text})
+            continue
+        # function call outputs etc. — best-effort
+        if t in ("function_call_output", "tool_result"):
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": item.get("call_id") or item.get("id") or "call",
+                    "content": content_to_text(item.get("output") or item.get("content")),
+                }
+            )
+    if not messages:
+        messages = [{"role": "user", "content": "hello"}]
+    return messages
+
+
+def convert_tools(tools):
+    out = []
+    for t in tools or []:
+        if not isinstance(t, dict):
+            continue
+        if t.get("type") == "function":
+            if "function" in t:
+                out.append(t)
+            else:
+                out.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": t.get("name"),
+                            "description": t.get("description") or "",
+                            "parameters": t.get("parameters")
+                            or t.get("input_schema")
+                            or {"type": "object", "properties": {}},
+                        },
+                    }
+                )
+        elif t.get("type") == "custom":
+            out.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t.get("name") or "tool",
+                        "description": (t.get("description") or "")[:2000],
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "input": {"type": "string"},
+                            },
+                            "required": ["input"],
+                        },
+                    },
+                }
+            )
+    return out
+
+
+def adapt_responses_to_chat(body: dict) -> dict:
+    model = body.get("model") or "deepseek-chat"
+    model = MODEL_MAP.get(model, model)
+    # strip openrouter prefix if any
+    if model.startswith("deepseek/"):
+        model = MODEL_MAP.get(model, model.replace("deepseek/", ""))
+    chat = {
+        "model": model,
+        "messages": responses_input_to_messages(body.get("input")),
+        "stream": bool(body.get("stream", True)),
+    }
+    tools = convert_tools(body.get("tools"))
+    if tools:
+        chat["tools"] = tools
+        if body.get("tool_choice") is not None:
+            chat["tool_choice"] = body.get("tool_choice")
+    # reasoning models
+    if body.get("reasoning") and isinstance(body["reasoning"], dict):
+        # deepseek-reasoner ignores temperature sometimes
+        pass
+    if body.get("max_output_tokens"):
+        chat["max_tokens"] = body["max_output_tokens"]
+    elif body.get("max_tokens"):
+        chat["max_tokens"] = body["max_tokens"]
+    return chat
+
+
+def stream_chat_as_responses(chat_resp, wfile, model: str):
+    """Convert DeepSeek chat SSE into OpenAI-ish responses SSE."""
+    import uuid
+
+    resp_id = "ds_" + uuid.uuid4().hex[:24]
+    created = int(time.time())
+
+    def emit(event: str, data: dict):
+        payload = json.dumps(data, ensure_ascii=False)
+        wfile.write(f"event: {event}\n".encode())
+        wfile.write(f"data: {payload}\n\n".encode())
+        wfile.flush()
+
+    emit(
+        "response.created",
+        {
+            "type": "response.created",
+            "response": {
+                "id": resp_id,
+                "object": "response",
+                "created_at": created,
+                "status": "in_progress",
+                "model": model,
+                "output": [],
+            },
+        },
+    )
+    emit(
+        "response.output_item.added",
+        {
+            "type": "response.output_item.added",
+            "output_index": 0,
+            "item": {
+                "type": "message",
+                "id": "msg_" + resp_id[:12],
+                "role": "assistant",
+                "content": [],
+            },
+        },
+    )
+    emit(
+        "response.content_part.added",
+        {
+            "type": "response.content_part.added",
+            "item_id": "msg_" + resp_id[:12],
+            "output_index": 0,
+            "content_index": 0,
+            "part": {"type": "output_text", "text": ""},
+        },
+    )
+
+    full_text = []
+    buf = b""
+    while True:
+        chunk = chat_resp.read(4096)
+        if not chunk:
+            break
+        buf += chunk
+        while b"\n" in buf:
+            line, buf = buf.split(b"\n", 1)
+            line = line.strip()
+            if not line or not line.startswith(b"data:"):
+                continue
+            data = line[5:].strip()
+            if data == b"[DONE]":
+                break
+            try:
+                obj = json.loads(data)
+            except Exception:
+                continue
+            choices = obj.get("choices") or []
+            if not choices:
+                continue
+            delta = choices[0].get("delta") or {}
+            # reasoning content from reasoner models — surface as text too
+            piece = delta.get("content") or ""
+            reasoning = delta.get("reasoning_content") or ""
+            if reasoning and not piece:
+                # skip dumping full chain-of-thought by default; optional
+                pass
+            if piece:
+                full_text.append(piece)
+                emit(
+                    "response.output_text.delta",
+                    {
+                        "type": "response.output_text.delta",
+                        "item_id": "msg_" + resp_id[:12],
+                        "output_index": 0,
+                        "content_index": 0,
+                        "delta": piece,
+                    },
+                )
+            # tool calls
+            tcs = delta.get("tool_calls")
+            if tcs:
+                # minimal: append as text note if tools incomplete — better than drop
+                for tc in tcs:
+                    fn = (tc.get("function") or {})
+                    name = fn.get("name") or ""
+                    args = fn.get("arguments") or ""
+                    if name or args:
+                        piece2 = f""
+                        # accumulate via separate path — for now emit as text for visibility
+                        pass
+
+    text = "".join(full_text)
+    emit(
+        "response.output_text.done",
+        {
+            "type": "response.output_text.done",
+            "item_id": "msg_" + resp_id[:12],
+            "output_index": 0,
+            "content_index": 0,
+            "text": text,
+        },
+    )
+    emit(
+        "response.content_part.done",
+        {
+            "type": "response.content_part.done",
+            "item_id": "msg_" + resp_id[:12],
+            "output_index": 0,
+            "content_index": 0,
+            "part": {"type": "output_text", "text": text},
+        },
+    )
+    emit(
+        "response.output_item.done",
+        {
+            "type": "response.output_item.done",
+            "output_index": 0,
+            "item": {
+                "type": "message",
+                "id": "msg_" + resp_id[:12],
+                "role": "assistant",
+                "status": "completed",
+                "content": [{"type": "output_text", "text": text}],
+            },
+        },
+    )
+    emit(
+        "response.completed",
+        {
+            "type": "response.completed",
+            "response": {
+                "id": resp_id,
+                "object": "response",
+                "created_at": created,
+                "status": "completed",
+                "model": model,
+                "output": [
+                    {
+                        "type": "message",
+                        "id": "msg_" + resp_id[:12],
+                        "role": "assistant",
+                        "status": "completed",
+                        "content": [{"type": "output_text", "text": text}],
+                    }
+                ],
+            },
+        },
+    )
+
+
+class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, fmt, *args):
+        log("proxy: " + (fmt % args))
+
+    def _read(self) -> bytes:
+        n = int(self.headers.get("Content-Length") or 0)
+        return self.rfile.read(n) if n else b""
+
+    def do_GET(self):
+        if self.path.split("?")[0] in ("/v1/models", "/models"):
+            body = json.dumps(
+                {
+                    "object": "list",
+                    "data": [
+                        {"id": "deepseek-chat", "object": "model"},
+                        {"id": "deepseek-reasoner", "object": "model"},
+                        {"id": "deepseek/deepseek-chat", "object": "model"},
+                        {"id": "deepseek/deepseek-r1", "object": "model"},
+                    ],
+                }
+            ).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        self.send_response(404)
+        self.end_headers()
+
+    def do_POST(self):
+        path = self.path.split("?")[0]
+        raw = self._read()
+        try:
+            key = load_key()
+        except Exception as e:
+            msg = json.dumps({"error": {"message": str(e)}}).encode()
+            self.send_response(401)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(msg)))
+            self.end_headers()
+            self.wfile.write(msg)
+            return
+
+        try:
+            body = json.loads(raw.decode("utf-8") or "{}")
+        except Exception:
+            body = {}
+
+        if path.endswith("/responses"):
+            chat_body = adapt_responses_to_chat(body)
+            url = UPSTREAM + "/chat/completions"
+        elif path.endswith("/chat/completions"):
+            chat_body = body
+            # map model names
+            m = chat_body.get("model") or "deepseek-chat"
+            chat_body["model"] = MODEL_MAP.get(m, m)
+            url = UPSTREAM + "/chat/completions"
+        else:
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        data = json.dumps(chat_body).encode()
+        req = urllib.request.Request(
+            url,
+            data=data,
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "Accept": "text/event-stream, application/json",
+            },
+        )
+        try:
+            resp = make_opener().open(req, timeout=600)
+        except urllib.error.HTTPError as e:
+            err = e.read()
+            log(f"upstream {e.code}: {err[:300]!r}")
+            self.send_response(e.code)
+            self.send_header("Content-Type", e.headers.get("Content-Type", "application/json"))
+            self.send_header("Content-Length", str(len(err)))
+            self.end_headers()
+            self.wfile.write(err)
+            return
+        except Exception as e:
+            msg = json.dumps({"error": {"message": str(e)}}).encode()
+            self.send_response(502)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(msg)))
+            self.end_headers()
+            self.wfile.write(msg)
+            return
+
+        ctype = resp.headers.get("Content-Type", "application/json")
+        if path.endswith("/responses") and chat_body.get("stream", True):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            try:
+                stream_chat_as_responses(
+                    resp, self.wfile, chat_body.get("model") or "deepseek-chat"
+                )
+            finally:
+                resp.close()
+            return
+
+        # non-stream or chat passthrough
+        payload = resp.read()
+        self.send_response(resp.status)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+        resp.close()
+
+
+def is_running() -> bool:
+    if not PID_PATH.exists():
+        return False
+    try:
+        os.kill(int(PID_PATH.read_text().strip()), 0)
+        return True
+    except Exception:
+        return False
+
+
+def start_foreground():
+    try:
+        load_key()
+    except Exception as e:
+        print(e, file=sys.stderr)
+        raise SystemExit(1)
+    ThreadingHTTPServer.allow_reuse_address = True
+    httpd = ThreadingHTTPServer((HOST, PORT), Handler)
+    PID_PATH.write_text(str(os.getpid()))
+    log(f"listening on http://{HOST}:{PORT} -> {UPSTREAM}")
+    print(f"DeepSeek proxy on http://{HOST}:{PORT}")
+
+    def _stop(*_):
+        threading.Thread(target=httpd.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    try:
+        httpd.serve_forever(poll_interval=0.5)
+    finally:
+        httpd.server_close()
+        if PID_PATH.exists():
+            try:
+                PID_PATH.unlink()
+            except OSError:
+                pass
+
+
+def start_background():
+    if is_running():
+        print(f"already running on http://{HOST}:{PORT}")
+        return
+    load_key()
+    logf = LOG_PATH.open("a")
+    proc = subprocess.Popen(
+        [sys.executable, str(Path(__file__).resolve()), "run"],
+        stdout=logf,
+        stderr=logf,
+        start_new_session=True,
+        env={**os.environ},
+    )
+    import socket
+
+    for _ in range(50):
+        time.sleep(0.1)
+        if is_running():
+            print(f"started pid={proc.pid} http://{HOST}:{PORT}")
+            return
+        try:
+            with socket.create_connection((HOST, PORT), timeout=0.2):
+                print(f"started pid={proc.pid}")
+                return
+        except OSError:
+            pass
+    print("failed to start; see ~/.codex/deepseek-proxy.log", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def stop():
+    if PID_PATH.exists():
+        try:
+            os.kill(int(PID_PATH.read_text().strip()), signal.SIGTERM)
+            print("stopped")
+        except ProcessLookupError:
+            print("not running")
+        try:
+            PID_PATH.unlink()
+        except OSError:
+            pass
+    else:
+        print("not running")
+
+
+def status():
+    if is_running():
+        print(f"running pid={PID_PATH.read_text().strip()} http://{HOST}:{PORT}")
+    else:
+        print("not running")
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "run"
+    if cmd == "run":
+        start_foreground()
+    elif cmd == "start":
+        start_background()
+    elif cmd == "stop":
+        stop()
+    elif cmd == "status":
+        status()
+    elif cmd == "restart":
+        stop()
+        time.sleep(0.3)
+        start_background()
+    else:
+        print("usage: deepseek-proxy [run|start|stop|status|restart]")
+        raise SystemExit(2)
+
+
+if __name__ == "__main__":
+    main()

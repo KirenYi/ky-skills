@@ -195,6 +195,66 @@ sync_openrouter_bearer_to_config() {
   done
 }
 
+ensure_deepseek_key_interactive() {
+  if [[ -n "${DEEPSEEK_API_KEY:-}" ]]; then return 0; fi
+  if [[ -f "$ENV_FILE" ]]; then set -a; source "$ENV_FILE" || true; set +a; fi
+  if [[ -n "${DEEPSEEK_API_KEY:-}" ]]; then return 0; fi
+  if ! command -v osascript >/dev/null; then
+    echo "缺少 DEEPSEEK_API_KEY。写入 $ENV_FILE" >&2
+    return 1
+  fi
+  while true; do
+    local raw btn key
+    raw=$(osascript <<'APPLESCRIPT' 2>/dev/null || true
+set dlg to display dialog "使用 DeepSeek 需要【DeepSeek 官网】API Key（不是 OpenRouter）。
+
+打开 https://platform.deepseek.com/api_keys 创建 Key 后粘贴。
+也可点「查看教程」。" buttons {"取消", "查看教程", "保存并切换"} default button "保存并切换" with title "配置 DeepSeek API Key" default answer ""
+return (button returned of dlg) & tab & (text returned of dlg)
+APPLESCRIPT
+)
+    btn="${raw%%$'\t'*}"
+    key="${raw#*$'\t'}"
+    case "$btn" in
+      取消|"") return 1 ;;
+      查看教程) open_tutorial "index.html#deepseek"; continue ;;
+      保存并切换)
+        key=$(echo "$key" | tr -d '[:space:]')
+        [[ -z "$key" ]] && { gui_alert "Key 不能为空"; continue; }
+        umask 077
+        touch "$ENV_FILE"
+        DEEPSEEK_API_KEY_SAVE="$key" ENV_FILE_SAVE="$ENV_FILE" python3 - <<'PY'
+import os
+from pathlib import Path
+path = Path(os.environ["ENV_FILE_SAVE"])
+key = os.environ["DEEPSEEK_API_KEY_SAVE"]
+lines = path.read_text().splitlines() if path.exists() else []
+out, found = [], False
+for line in lines:
+    if line.startswith("DEEPSEEK_API_KEY="):
+        out.append(f"DEEPSEEK_API_KEY={key}")
+        found = True
+    else:
+        out.append(line)
+if not found:
+    out.append(f"DEEPSEEK_API_KEY={key}")
+path.write_text("\n".join(out) + "\n")
+path.chmod(0o600)
+PY
+        export DEEPSEEK_API_KEY="$key"
+        notify "DeepSeek Key 已保存" "已写入 ky-provider.env"
+        return 0
+        ;;
+      *) return 1 ;;
+    esac
+  done
+}
+
+profile_requires_deepseek() {
+  python3 -c "import json;from pathlib import Path;p=json.loads(Path(r'''$PROFILES_JSON''').read_text())['profiles']['$1'];print('yes' if 'DEEPSEEK_API_KEY' in (p.get('requires_env') or []) else 'no')"
+}
+
+
 ensure_openrouter_key_interactive() {
   # if already set, ok
   if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
@@ -399,6 +459,15 @@ start_proxy_if_needed() {
       || env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u all_proxy \
            "$BIN/supergrok-proxy" restart >/dev/null 2>&1 || true
   fi
+  if [[ "$need" == "deepseek" ]]; then
+    if [[ -f "$ENV_FILE" ]]; then set -a; source "$ENV_FILE" || true; set +a; fi
+    if [[ -x "$BIN/deepseek-proxy" ]]; then
+      env DEEPSEEK_API_KEY="${DEEPSEEK_API_KEY:-}" \
+        "$BIN/deepseek-proxy" start >/dev/null 2>&1 \
+        || env DEEPSEEK_API_KEY="${DEEPSEEK_API_KEY:-}" \
+             "$BIN/deepseek-proxy" restart >/dev/null 2>&1 || true
+    fi
+  fi
 }
 
 restart_desktop() {
@@ -427,6 +496,9 @@ cmd_use() {
   fi
 
   # interactive requirements
+  if [[ "$(profile_requires_deepseek "$pid")" == "yes" ]]; then
+    ensure_deepseek_key_interactive || exit 3
+  fi
   if [[ "$(profile_requires_openrouter "$pid")" == "yes" ]]; then
     ensure_openrouter_key_interactive || exit 3
     sync_openrouter_bearer_to_config

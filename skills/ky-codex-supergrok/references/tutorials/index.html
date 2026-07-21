@@ -36,6 +36,7 @@
     <a href="#openrouter">配置 API（Claude / DeepSeek / Gemini）</a>
     <a href="#grok">配置 SuperGrok</a>
     <a href="#switch">怎么切换</a>
+    <a href="#deepseek">DeepSeek 官网 Key</a>
     <a href="#faq">常见问题</a>
   </nav>
 
@@ -90,6 +91,18 @@ chmod 600 ~/.codex/ky-provider.env</pre>
 ~/.codex/bin/codex-provider status</pre></li>
     </ul>
     <p class="ok">第一次配 Key 要粘贴一次；之后同一通道再点 = 直接切换。</p>
+  </div>
+
+  
+  <h2 id="deepseek">配置 DeepSeek 官网 API（不是 OpenRouter）</h2>
+  <ol class="steps">
+    <li class="step">打开 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com/api_keys</a>，登录并创建 API Key。</li>
+    <li class="step">双击「Codex 切换模型」→ 选 <strong>DeepSeek Chat</strong>。弹窗里粘贴 Key →「保存并切换」。</li>
+    <li class="step">Key 保存在本机 <code>~/.codex/ky-provider.env</code> 的 <code>DEEPSEEK_API_KEY=...</code>。</li>
+    <li class="step">本机会启动本地协议桥（把 Codex 的 Responses 转成 DeepSeek Chat）。完全退出并重开 Codex，新建对话。</li>
+  </ol>
+  <div class="card">
+    <p><strong>注意：</strong>DeepSeek 官网 Key 与 OpenRouter 的 <code>sk-or-v1-...</code> 不是同一种。Claude/Gemini 仍用 OpenRouter；DeepSeek 用官网 Key。</p>
   </div>
 
   <h2 id="faq">常见问题</h2>

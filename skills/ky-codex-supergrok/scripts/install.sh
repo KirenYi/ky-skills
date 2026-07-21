@@ -25,6 +25,7 @@ install_bin supergrok-proxy
 install_bin codex-provider
 install_bin codex-provider-app-run
 install_bin ensure-desktop-shortcut.sh
+install_bin deepseek-proxy
 cp "$SCRIPTS/sync-openrouter-bearer.py" "$BIN/sync-openrouter-bearer.py"
 chmod 700 "$BIN/sync-openrouter-bearer.py"
 cp "$SCRIPTS/profiles.json" "$CODEX_HOME/ky-profiles.json"

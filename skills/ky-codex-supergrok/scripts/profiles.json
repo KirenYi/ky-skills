@@ -25,7 +25,9 @@
       "service_tier": null,
       "model_catalog_json": "~/.codex/model-catalogs/xai-models.json",
       "requires_env": [],
-      "requires_files": ["~/.grok/auth.json"],
+      "requires_files": [
+        "~/.grok/auth.json"
+      ],
       "start_proxy": "supergrok",
       "desktop_app": true,
       "tutorial": "index.html#grok"
@@ -38,7 +40,9 @@
       "model_reasoning_effort": "high",
       "service_tier": null,
       "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
-      "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_env": [
+        "OPENROUTER_API_KEY"
+      ],
       "requires_files": [],
       "start_proxy": null,
       "desktop_app": true,
@@ -52,7 +56,9 @@
       "model_reasoning_effort": "high",
       "service_tier": null,
       "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
-      "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_env": [
+        "OPENROUTER_API_KEY"
+      ],
       "requires_files": [],
       "start_proxy": null,
       "desktop_app": true,
@@ -66,7 +72,9 @@
       "model_reasoning_effort": "high",
       "service_tier": null,
       "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
-      "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_env": [
+        "OPENROUTER_API_KEY"
+      ],
       "requires_files": [],
       "start_proxy": null,
       "desktop_app": true,
@@ -74,31 +82,35 @@
     },
     "deepseek": {
       "label": "DeepSeek Chat",
-      "description": "OpenRouter → DeepSeek（首次可弹窗填 Key）",
-      "model": "deepseek/deepseek-chat",
-      "model_provider": "openrouter",
+      "description": "DeepSeek 官网 API Key（本地协议桥，非 OpenRouter）",
+      "model": "deepseek-chat",
+      "model_provider": "deepseek",
       "model_reasoning_effort": "medium",
       "service_tier": null,
-      "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
-      "requires_env": ["OPENROUTER_API_KEY"],
+      "model_catalog_json": null,
+      "requires_env": [
+        "DEEPSEEK_API_KEY"
+      ],
       "requires_files": [],
-      "start_proxy": null,
+      "start_proxy": "deepseek",
       "desktop_app": true,
-      "tutorial": "index.html#openrouter"
+      "tutorial": "index.html#deepseek"
     },
     "deepseek-r1": {
-      "label": "DeepSeek R1",
-      "description": "OpenRouter → DeepSeek R1",
-      "model": "deepseek/deepseek-r1",
-      "model_provider": "openrouter",
+      "label": "DeepSeek R1 / Reasoner",
+      "description": "DeepSeek 官网 reasoner 模型",
+      "model": "deepseek-reasoner",
+      "model_provider": "deepseek",
       "model_reasoning_effort": "high",
       "service_tier": null,
-      "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
-      "requires_env": ["OPENROUTER_API_KEY"],
+      "model_catalog_json": null,
+      "requires_env": [
+        "DEEPSEEK_API_KEY"
+      ],
       "requires_files": [],
-      "start_proxy": null,
+      "start_proxy": "deepseek",
       "desktop_app": true,
-      "tutorial": "index.html#openrouter"
+      "tutorial": "index.html#deepseek"
     },
     "gemini": {
       "label": "Gemini 2.5 Pro",
@@ -108,7 +120,9 @@
       "model_reasoning_effort": "high",
       "service_tier": null,
       "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
-      "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_env": [
+        "OPENROUTER_API_KEY"
+      ],
       "requires_files": [],
       "start_proxy": null,
       "desktop_app": true,
@@ -133,6 +147,13 @@
         "HTTP-Referer": "https://github.com/KirenYi/ky-skills",
         "X-Title": "ky-codex-supergrok"
       }
+    },
+    "deepseek": {
+      "name": "DeepSeek (official key)",
+      "base_url": "http://127.0.0.1:18766/v1",
+      "wire_api": "responses",
+      "env_key": null,
+      "supports_websockets": false
     }
   }
 }

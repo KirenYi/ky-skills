@@ -24,6 +24,14 @@
 
 ---
 
+## 2026-07-21 — Grok — 支持 DeepSeek 官网 API Key
+
+- **问题**：用户使用 DeepSeek 官网 Key，却走 OpenRouter → 401
+- **修复**：deepseek-proxy 本地桥（Responses→Chat）；profile 用 DEEPSEEK_API_KEY；弹窗区分官网 Key
+- **验证**：本地 /v1/responses 返回 200 且含 DEEPSEEK_OK
+
+---
+
 ## 2026-07-21 — Grok — 修复 OpenRouter Desktop 401 Missing Authentication
 
 - **原因**：Codex Desktop 读不到 ky-provider.env，请求无 Authorization

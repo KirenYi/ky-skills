@@ -1,3 +1,8 @@
+## 0.5.0 — 2026-07-21
+
+- DeepSeek 官网 API Key 直连（本地 deepseek-proxy 协议桥）
+- 与 OpenRouter 路径分离；教程增加 DeepSeek 专节
+
 ## 0.4.0 — 2026-07-21
 
 - 桌面默认仅「切换模型」+「使用教程」
