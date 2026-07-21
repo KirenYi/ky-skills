@@ -88,7 +88,7 @@ mkdir -p "$HOME/.codex"
 grep -qxF "$PID" "$TRACK" 2>/dev/null || echo "$PID" >>"$TRACK"
 
 if [[ "$CREATED" == "1" ]]; then
-  osascript -e "display notification \"下次可直接点「${APP_NAME}」秒切\" with title \"已生成桌面快捷方式\"" 2>/dev/null || true
+  osascript -e "display notification \"下次可直接点「${APP_NAME}」秒切。误删可再在切换菜单选一次重新生成\" with title \"已生成桌面快捷方式\"" 2>/dev/null || true
   echo "desktop shortcut created: ${APP_NAME}"
 else
   echo "desktop shortcut refreshed: ${APP_NAME}"

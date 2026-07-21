@@ -24,6 +24,14 @@
 
 ---
 
+## 2026-07-21 — Grok — 官方 Codex 图标 + 误删可重生 + 清理桌面
+
+- 图标改用 ChatGPT 内置 icon-codex-dark-color
+- 桌面仅保留「Codex 切换模型」；通道快捷方式可再选一次重新生成
+- 文档/教程补充误删恢复说明
+
+---
+
 ## 2026-07-21 — Grok — 主图标设计 + 中转站 API + 去掉教程图标
 
 - **已完成**：仅保留「Codex 切换模型」主图标（.icns）；教程只在菜单；新增⑤中转站（base_url+key+model + relay-proxy）
