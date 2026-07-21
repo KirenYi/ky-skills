@@ -428,7 +428,13 @@ cmd_use() {
   local label
   label=$(python3 -c "import json;from pathlib import Path;print(json.loads(Path(r'''$PROFILES_JSON''').read_text())['profiles']['$pid']['label'])")
   restart_desktop
-  notify "Codex → $label" "已切换。请新建对话。不会用可点「Codex 使用教程」。"
+  # First successful use → auto desktop shortcut for this channel only
+  if [[ -x "$BIN/ensure-desktop-shortcut.sh" ]]; then
+    "$BIN/ensure-desktop-shortcut.sh" "$pid" "$label" || true
+  elif [[ -x "$SCRIPT_DIR/ensure-desktop-shortcut.sh" ]]; then
+    "$SCRIPT_DIR/ensure-desktop-shortcut.sh" "$pid" "$label" || true
+  fi
+  notify "Codex → $label" "已切换。请新建对话。已为该通道生成/更新桌面快捷方式。"
   log "switched to $pid"
 }
 

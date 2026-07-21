@@ -24,6 +24,17 @@
 
 ---
 
+## 2026-07-21 — Grok — 桌面按需生成快捷方式
+
+- **操作者**：Grok
+- **目标**：桌面不预装一堆图标；首次选中通道后自动生成快捷方式
+- **已完成**：默认仅「切换模型」+「使用教程」；ensure-desktop-shortcut 在成功切换后创建 Codex → xxx
+- **改动路径**：skills/ky-codex-supergrok/scripts/*
+- **验证**：use grok → 桌面出现 Codex → Grok
+- **下一步**：无
+
+---
+
 ## 2026-07-21 — Grok — 清理桌面切换器图标
 
 - **操作者**：Grok

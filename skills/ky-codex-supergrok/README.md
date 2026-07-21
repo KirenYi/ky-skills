@@ -12,19 +12,20 @@ bash skills/ky-codex-supergrok/scripts/install.sh
 
 或在 Agent 里：`/ky-codex-supergrok` → 帮我安装。
 
-### 2. 日常只做一件事
+### 2. 日常怎么点（桌面不堆图标）
 
-双击桌面 **「Codex 切换模型」** → 点要的通道。
+默认桌面**只有 2 个**：
 
-桌面**只保留 5 个入口**（装/升级时会自动清掉旧的 Claude/DeepSeek 等多余图标）：
+| 图标 | 作用 |
+|------|------|
+| **Codex 切换模型** | 主界面，选通道 |
+| **Codex 使用教程** | 不会用就点 |
 
-| 图标 | 是什么 |
-|------|--------|
-| **Codex 切换模型** | 主菜单：任选通道 +「不会使用？打开教程」 |
-| **Codex 使用教程** | 图文教程 |
-| **Codex → OpenAI** | ChatGPT 官方额度 |
-| **Codex → Grok** | SuperGrok 订阅 |
-| **Codex → API合集** | Claude / DeepSeek / Gemini（一个 OpenRouter Key；进列表可再细切） |
+**第一次**在主界面选中并成功配置某个通道（例如 Grok）后，会**自动**在桌面生成：
+
+`Codex → Grok`
+
+之后日常直接点这个快捷方式秒切；没选过的通道不会出现在桌面。
 
 ### 3. 第一次用 DeepSeek / Claude？
 

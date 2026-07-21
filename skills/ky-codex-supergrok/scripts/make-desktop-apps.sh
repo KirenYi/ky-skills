@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create only the essential macOS switcher apps (keep desktop clean).
+# Only install the hub apps. Per-channel desktop shortcuts are created on first use.
 set -euo pipefail
 BIN="${CODEX_BIN_DIR:-$HOME/.codex/bin}"
 DESTS=("$HOME/Desktop" "$HOME/Applications")
@@ -18,7 +18,7 @@ make_app() {
   <key>CFBundleIdentifier</key><string>local.ky.codex.provider.${mode}</string>
   <key>CFBundleName</key><string>${name}</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>3.1</string>
+  <key>CFBundleShortVersionString</key><string>4.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
@@ -33,25 +33,33 @@ LAUNCH
   echo "created $app"
 }
 
-# Remove legacy per-model shortcuts if present (Claude/DeepSeek/Gemini/.command)
-cleanup_legacy() {
+cleanup_all_channel_shortcuts() {
   local dest="$1"
+  # Remove pre-seeded / legacy channel icons (kept list is only hub + tutorial)
   rm -rf \
+    "$dest/Codex → OpenAI.app" \
+    "$dest/Codex → Grok.app" \
+    "$dest/Codex → API合集.app" \
     "$dest/Codex → Claude.app" \
     "$dest/Codex → DeepSeek.app" \
     "$dest/Codex → Gemini.app" \
-    "$dest/Codex → claude.app" \
+    "$dest/Codex → claude-opus.app" \
+    "$dest/Codex → deepseek-r1.app" \
     2>/dev/null || true
   rm -f "$dest"/Codex*.command "$dest"/Codex→*.command 2>/dev/null || true
 }
 
 for dest in "${DESTS[@]}"; do
   mkdir -p "$dest"
-  cleanup_legacy "$dest"
-  # Only 5 apps — keep the desktop simple
+  # Do NOT wipe user-created channel shortcuts on reinstall — only remove if KY_CODEX_RESET_SHORTCUTS=1
+  if [[ "${KY_CODEX_RESET_SHORTCUTS:-0}" == "1" ]]; then
+    cleanup_all_channel_shortcuts "$dest"
+  else
+    # still remove old .command clutter
+    rm -f "$dest"/Codex*.command 2>/dev/null || true
+  fi
   make_app "Codex 切换模型" "pick" "$dest"
   make_app "Codex 使用教程" "tutorial" "$dest"
-  make_app "Codex → OpenAI" "openai" "$dest"
-  make_app "Codex → Grok" "grok" "$dest"
-  make_app "Codex → API合集" "api" "$dest"
 done
+
+echo "Hub apps ready. Channel shortcuts appear after first successful switch."

@@ -24,6 +24,7 @@ install_bin supergrok-token
 install_bin supergrok-proxy
 install_bin codex-provider
 install_bin codex-provider-app-run
+install_bin ensure-desktop-shortcut.sh
 cp "$SCRIPTS/profiles.json" "$CODEX_HOME/ky-profiles.json"
 echo "installed $CODEX_HOME/ky-profiles.json"
 cp "$SCRIPTS/generate-catalog.py" "$BIN/generate-catalog.py" 2>/dev/null || true
@@ -108,6 +109,7 @@ model_catalog_json = "~/.codex/model-catalogs/xai-models.json"
 TOML
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
+  # Hub + tutorial only; per-channel icons created on first successful switch
   bash "$SCRIPTS/make-desktop-apps.sh" || true
 fi
 
@@ -123,10 +125,10 @@ echo "Profiles:"
 KY_CODEX_PROFILES="$CODEX_HOME/ky-profiles.json" "$BIN/codex-provider" list
 echo
 echo "Next (simple):"
-echo "  • Double-click 「Codex 切换模型」 — pick a channel"
-echo "  • First Claude/DeepSeek: dialog asks for OpenRouter key + 「查看教程」"
-echo "  • Or open 「Codex 使用教程」 anytime"
-echo "  • SuperGrok: grok login once, then Codex → Grok"
+echo "  • Desktop only has 2 icons: 「Codex 切换模型」+「Codex 使用教程」"
+echo "  • First time you pick Grok/DeepSeek/... → auto-creates that shortcut on Desktop"
+echo "  • Later: click the shortcut to switch in one tap"
+echo "  • First API use: dialog for OpenRouter key + tutorial button"
 echo "  • After switch: always NEW chat in Codex"
 echo
 KY_CODEX_PROFILES="$CODEX_HOME/ky-profiles.json" "$BIN/codex-provider" status || true
