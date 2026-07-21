@@ -46,20 +46,21 @@
   </div>
 
   <h2 id="quick">30 秒总览</h2>
-  <div class="card">
-    <p><strong>三条大通道：</strong></p>
+    <div class="card">
+    <p><strong>菜单怎么选（看清标注）：</strong></p>
     <ul>
-      <li><strong>OpenAI</strong>：ChatGPT 登录，用官方额度</li>
-      <li><strong>SuperGrok</strong>：用 <code>grok login</code> 订阅，不用买 API</li>
-      <li><strong>API 模型</strong>：Claude / DeepSeek / Gemini 等，用 <strong>一个</strong> OpenRouter Key</li>
+      <li><strong>① OpenAI / ChatGPT 官方额度</strong>：ChatGPT 登录，<em>不填 Key</em></li>
+      <li><strong>② SuperGrok（X 订阅）</strong>：<code>grok login</code>，<em>不填 Key</em>（Premium+ 别浪费 Grok 额度）</li>
+      <li><strong>③ DeepSeek … ← 官网 Key</strong>：去 <a href="https://platform.deepseek.com/api_keys">platform.deepseek.com</a> 申请，<em>不要</em>填 OpenRouter</li>
+      <li><strong>④ OpenRouter / Claude / Gemini</strong>：去 <a href="https://openrouter.ai/keys">openrouter.ai</a> 申请 <code>sk-or-v1-…</code>，<em>不是</em> DeepSeek 官网 Key</li>
     </ul>
-    <p class="muted">为什么 DeepSeek 不直接填官网 Key？因为新版 Codex 只认 Responses 协议，直连容易失败；OpenRouter 兼容且一家 Key 多用。</p>
+    <p class="muted">记一句：DeepSeek 选带「官网 Key」的项；Claude/Gemini 选带「OpenRouter」的项。</p>
   </div>
 
-  <h2 id="openrouter">配置 Claude / DeepSeek / Gemini（推荐）</h2>
+  <h2 id="openrouter">配置 Claude / Gemini（OpenRouter Key）</h2>
   <ol class="steps">
     <li class="step">浏览器打开 <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai/keys</a>，登录后 <strong>Create Key</strong>，复制 <code>sk-or-v1-...</code></li>
-    <li class="step">双击桌面 <strong>「Codex 切换模型」</strong>，选 Claude 或 DeepSeek。若未配置 Key，会弹出窗口——<strong>粘贴 Key → 确定</strong>。也可以点对话框里的「查看教程」回到本页。</li>
+    <li class="step">双击「Codex 切换模型」，选带 <strong>OpenRouter</strong> 标注的 Claude/Gemini（或「④ OpenRouter 合集」）。弹窗里粘贴 <code>sk-or-v1-…</code>，不要填 DeepSeek 官网 Key。</li>
     <li class="step">等待 ChatGPT/Codex 自动重启，然后 <strong>新建对话</strong>（不要用旧会话）。</li>
     <li class="step">若已进入「API 模型」通道：可在 Codex 里用模型列表在 Claude / DeepSeek / Gemini 之间切换（桌面端有时显示「自定义」，属正常）。</li>
   </ol>

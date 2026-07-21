@@ -549,7 +549,7 @@ for l in labels:
 items = ", ".join(escaped)
 out.write_text(
     "set opts to {" + items + "}\n"
-    "set chosen to choose from list opts with prompt \"选择 Codex 通道 / 模型：\\n（首次 Claude·DeepSeek 会引导填写 API）\" default items {item 1 of opts}\n"
+    "set chosen to choose from list opts with prompt \"选通道（看清数字/标注）：\n①官方 ②Grok订阅 ③DeepSeek官网Key ④OpenRouter Key\" default items {item 1 of opts}\n"
     "if chosen is false then\n  return \"\"\nelse\n  return item 1 of chosen\nend if\n"
 )
 ' "$PROFILES_JSON" "$tmp"

@@ -26,20 +26,6 @@ MODELS = [
         "priority": 1,
     },
     {
-        "slug": "deepseek/deepseek-chat",
-        "display_name": "DeepSeek Chat",
-        "description": "DeepSeek via OpenRouter",
-        "context_window": 128000,
-        "priority": 2,
-    },
-    {
-        "slug": "deepseek/deepseek-r1",
-        "display_name": "DeepSeek R1",
-        "description": "DeepSeek R1 via OpenRouter",
-        "context_window": 128000,
-        "priority": 3,
-    },
-    {
         "slug": "google/gemini-2.5-pro",
         "display_name": "Gemini 2.5 Pro",
         "description": "Gemini via OpenRouter",

@@ -1,3 +1,7 @@
+## 0.5.1 — 2026-07-21
+
+- 菜单/教程/README 统一数字标注：①官方 ②Grok ③DeepSeek官网 ④OpenRouter
+
 ## 0.5.0 — 2026-07-21
 
 - DeepSeek 官网 API Key 直连（本地 deepseek-proxy 协议桥）

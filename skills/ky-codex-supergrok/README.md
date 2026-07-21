@@ -2,6 +2,18 @@
 
 让 **Codex 换模型尽量像点按钮一样简单**。
 
+
+## 菜单怎么选（重要）
+
+| 菜单项 | 你要准备什么 | 不要填 |
+|--------|--------------|--------|
+| ① OpenAI / ChatGPT 官方额度 | ChatGPT 登录 | 任何 API Key |
+| ② SuperGrok（X 订阅） | `grok login` | API Key |
+| ③ DeepSeek … **← 官网 Key** | [DeepSeek 控制台](https://platform.deepseek.com/api_keys) 的 Key | OpenRouter Key |
+| ④ OpenRouter / Claude / Gemini | [OpenRouter](https://openrouter.ai/keys) 的 `sk-or-v1-…` | DeepSeek 官网 Key |
+
+一句话：**DeepSeek 看「官网 Key」；Claude/Gemini 看「OpenRouter」。**
+
 ## 用户怎么用（推荐）
 
 ### 1. 安装一次

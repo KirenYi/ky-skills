@@ -25,6 +25,15 @@ bash "$SKILL_ROOT/scripts/install.sh"
 
 会安装：bin、profiles、SuperGrok 代理、OpenRouter 多模型目录、离线教程、桌面 App。
 
+## 菜单标注（教用户时必须说清）
+
+| 标注 | 含义 |
+|------|------|
+| ① 官方 | ChatGPT 登录，无 Key |
+| ② SuperGrok | grok login 订阅，无 Key |
+| ③ DeepSeek ← 官网 Key | platform.deepseek.com |
+| ④ OpenRouter / Claude / Gemini | openrouter.ai 的 sk-or-v1- |
+
 ## 用户路径（请按此教）
 
 | 场景 | 操作 |
