@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Install SuperGrok ↔ Codex bridge on this machine.
-# Does NOT use console.x.ai paid API keys. Uses `grok login` SuperGrok session.
+# Install multi-model Codex switcher: SuperGrok + OpenAI + OpenRouter (Claude/DeepSeek/…).
 set -euo pipefail
 
 SKILL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -8,7 +7,7 @@ SCRIPTS="$SKILL_ROOT/scripts"
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 BIN="$CODEX_HOME/bin"
 
-echo "== ky-codex-supergrok install =="
+echo "== ky-codex-supergrok install (multi-model) =="
 echo "skill: $SKILL_ROOT"
 echo "codex home: $CODEX_HOME"
 
@@ -25,73 +24,103 @@ install_bin supergrok-token
 install_bin supergrok-proxy
 install_bin codex-provider
 install_bin codex-provider-app-run
+cp "$SCRIPTS/profiles.json" "$CODEX_HOME/ky-profiles.json"
+echo "installed $CODEX_HOME/ky-profiles.json"
+cp "$SCRIPTS/generate-catalog.py" "$BIN/generate-catalog.py" 2>/dev/null || true
+chmod 700 "$BIN/generate-catalog.py" 2>/dev/null || true
 
-# Fix app-run / provider to use installed paths (they already use $HOME/.codex/bin)
 python3 "$SCRIPTS/generate-catalog.py" "$CODEX_HOME/model-catalogs/xai-models.json"
 
-# Ensure provider block exists once (switcher manages model keys)
-if ! grep -q '\[model_providers\.xai\]' "$CODEX_HOME/config.toml" 2>/dev/null; then
-  mkdir -p "$CODEX_HOME"
-  touch "$CODEX_HOME/config.toml"
-  cat >> "$CODEX_HOME/config.toml" <<'TOML'
+# Ensure providers via codex-provider
+"$BIN/codex-provider" list >/dev/null
+# force provider blocks
+python3 - <<PY
+import json
+from pathlib import Path
+import subprocess, os
+os.environ["KY_CODEX_PROFILES"] = str(Path("$CODEX_HOME/ky-profiles.json"))
+# run ensure via use --no-restart openai is heavy; call provider list/status after path
+print("profiles ok")
+PY
 
-# --- ky-codex-supergrok provider (subscription SuperGrok, no API key) ---
-[model_providers.xai]
-name = "xAI SuperGrok"
-base_url = "http://127.0.0.1:18765/v1"
-wire_api = "responses"
-request_max_retries = 4
-stream_idle_timeout_ms = 600000
-supports_websockets = false
+# Ensure provider tables exist by calling internal ensure: use status after PATH
+export KY_CODEX_PROFILES="$CODEX_HOME/ky-profiles.json"
+# Trigger ensure_providers by a dry path: python snippet from install
+python3 - "$CODEX_HOME/config.toml" "$CODEX_HOME/ky-profiles.json" <<'PY'
+import json, sys
+from pathlib import Path
+cfg_path = Path(sys.argv[1]); prof = json.loads(Path(sys.argv[2]).read_text())
+text = cfg_path.read_text() if cfg_path.exists() else ""
+providers = prof.get("providers") or {}
+changed = False
+for pid, p in providers.items():
+    marker = f"[model_providers.{pid}]"
+    if marker in text:
+        continue
+    block = [f"\n# --- ky-codex-supergrok provider: {pid} ---", marker, f'name = "{p["name"]}"', f'base_url = "{p["base_url"]}"', f'wire_api = "{p.get("wire_api","responses")}"']
+    if p.get("env_key"):
+        block.append(f'env_key = "{p["env_key"]}"')
+    if p.get("supports_websockets") is False:
+        block.append("supports_websockets = false")
+    block.append("request_max_retries = 4")
+    block.append("stream_idle_timeout_ms = 600000")
+    headers = p.get("http_headers") or {}
+    if headers:
+        block.append("http_headers = { " + ", ".join(f'"{k}" = "{v}"' for k,v in headers.items()) + " }")
+    text = text.rstrip() + "\n" + "\n".join(block) + "\n"
+    changed = True
+cfg_path.parent.mkdir(parents=True, exist_ok=True)
+cfg_path.write_text(text if text.endswith("\n") else text+"\n")
+print("providers updated" if changed else "providers already present")
+PY
 
-[profiles.xai]
-model = "grok-4.5"
-model_provider = "xai"
-model_reasoning_effort = "high"
-model_catalog_json = "~/.codex/model-catalogs/xai-models.json"
-TOML
-  echo "appended [model_providers.xai] to config.toml"
+# env example
+if [[ ! -f "$CODEX_HOME/ky-provider.env" ]]; then
+  cat > "$CODEX_HOME/ky-provider.env" <<'ENV'
+# ky-codex-supergrok secrets (chmod 600). Do NOT commit this file.
+# OpenRouter unlocks Claude / DeepSeek / Gemini one-click profiles:
+#   https://openrouter.ai/keys
+# OPENROUTER_API_KEY=sk-or-v1-...
+
+# Optional (not required for SuperGrok subscription path):
+# DEEPSEEK_API_KEY=
+# ANTHROPIC_API_KEY=
+# XAI_API_KEY=
+ENV
+  chmod 600 "$CODEX_HOME/ky-provider.env"
+  echo "created $CODEX_HOME/ky-provider.env (add OPENROUTER_API_KEY for Claude/DeepSeek)"
 else
-  echo "model_providers.xai already present"
+  echo "keep existing $CODEX_HOME/ky-provider.env"
 fi
 
-# Write layered profile file
+# layered profile for CLI
 cat > "$CODEX_HOME/xai.config.toml" <<'TOML'
-# codex --profile xai
 model = "grok-4.5"
 model_provider = "xai"
 model_reasoning_effort = "high"
 model_catalog_json = "~/.codex/model-catalogs/xai-models.json"
 TOML
 
-# Desktop apps (macOS)
 if [[ "$(uname -s)" == "Darwin" ]]; then
   bash "$SCRIPTS/make-desktop-apps.sh" || true
 fi
 
-# Start proxy if grok auth exists
 if [[ -f "$HOME/.grok/auth.json" ]]; then
   env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u all_proxy \
-    "$BIN/supergrok-proxy" restart || "$BIN/supergrok-proxy" start || true
-  # Default to grok mode without forcing restart of ChatGPT during install
-  NO_RESTART=1 "$BIN/codex-provider" grok || true
-else
-  echo
-  echo "NOTE: ~/.grok/auth.json not found."
-  echo "      Install Grok Build CLI and run:  grok login"
-  echo "      Then:  ~/.codex/bin/supergrok-proxy start"
-  echo "             ~/.codex/bin/codex-provider grok"
+    "$BIN/supergrok-proxy" restart 2>/dev/null || "$BIN/supergrok-proxy" start 2>/dev/null || true
 fi
 
 echo
-echo "Install complete."
+echo "Install complete (multi-model)."
+echo
+echo "Profiles:"
+KY_CODEX_PROFILES="$CODEX_HOME/ky-profiles.json" "$BIN/codex-provider" list
 echo
 echo "Next:"
-echo "  1) grok login          # SuperGrok subscription (not API key)"
-echo "  2) ~/.codex/bin/supergrok-proxy start"
-echo "  3) Double-click Desktop app:  Codex → Grok   or   Codex → OpenAI"
-echo "     CLI:  ~/.codex/bin/codex-provider grok|openai|toggle|status"
-echo "  4) Restart ChatGPT/Codex Desktop and open a NEW chat"
+echo "  1) SuperGrok:  grok login && codex-provider use grok"
+echo "  2) Claude/DeepSeek/Gemini:  edit ~/.codex/ky-provider.env  (OPENROUTER_API_KEY=...)"
+echo "     then:  codex-provider use claude | deepseek | gemini"
+echo "  3) macOS:  double-click 「Codex 切换模型」 for a menu"
+echo "  4) Always open a NEW Codex chat after switching"
 echo
-echo "Status:"
-"$BIN/codex-provider" status || true
+KY_CODEX_PROFILES="$CODEX_HOME/ky-profiles.json" "$BIN/codex-provider" status || true

@@ -13,7 +13,7 @@ Kiren Yi（KY）的个人 Agent Skill 集合。
 | [`/ky-sph`](./skills/ky-sph/) | 整理视频号 / 公众号原料入库 |
 | [`/ky-xdraft`](./skills/ky-xdraft/) | 把 Markdown 做成 X 长文草稿流程 |
 | [`/ky-mphtml`](./skills/ky-mphtml/) | Markdown 排成公众号可粘贴 HTML |
-| [`/ky-codex-supergrok`](./skills/ky-codex-supergrok/) | Codex 接 SuperGrok 订阅 + 一键切换 OpenAI |
+| [`/ky-codex-supergrok`](./skills/ky-codex-supergrok/) | Codex 一键切 SuperGrok / Claude / DeepSeek / Gemini / OpenAI |
 
 以上能力均为 **KY 自维护的 skill 说明与脚本**（见 `skills/`）。  
 使用前请阅读各 skill 目录下的 `README.md` / `SKILL.md`。
@@ -57,7 +57,7 @@ Windows 也可先 `git clone` 再执行：
 | ky-sph | 你已保存的视频号/公众号素材路径或文案 | 统一入库说明与后续步骤 |
 | ky-xdraft | 本地 Markdown；Chrome 已登录 X | 按流程创建 X 长文**草稿**（默认不发布） |
 | ky-mphtml | Markdown 正文或文件 | 可复制进公众号后台的 HTML |
-| ky-codex-supergrok | SuperGrok 登录 + Codex 桌面端/CLI | 本地代理 + 一键切 Grok/OpenAI |
+| ky-codex-supergrok | SuperGrok 登录；可选 OpenRouter Key | 桌面一键切 Grok/Claude/DeepSeek/OpenAI… |
 
 更细的步骤、参数与限制见各 skill 内文档，**以 `skills/<name>/SKILL.md` 为准**。
 

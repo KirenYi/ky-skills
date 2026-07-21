@@ -1,47 +1,37 @@
 # How it works
 
-## Two different “Grok” paths
+## Profiles
 
-| Path | Auth | Billing | Endpoint |
-|------|------|---------|----------|
-| **SuperGrok (this skill)** | `grok login` → `~/.grok/auth.json` OAuth | Subscription quota | `https://cli-chat-proxy.grok.com` |
-| Paid API | `XAI_API_KEY` | Per-token at console.x.ai | `https://api.x.ai/v1` |
-
-This skill implements the **subscription** path only.
-
-## Components
-
-1. **`supergrok-token`**  
-   Reads / refreshes the OAuth access token from `~/.grok/auth.json` via `auth.x.ai`.
-
-2. **`supergrok-proxy`** (default `127.0.0.1:18765`)  
-   - Adds headers required by the CLI chat proxy (`X-XAI-Token-Auth`, `x-grok-client-version`, …)  
-   - Adapts Codex Responses bodies that SuperGrok rejects (e.g. `additional_tools`)  
-   - Optionally rewrites “based on GPT-5” developer text  
-   - By default does **not** use macOS system HTTP proxy (avoids CONNECT 503 through local VPN ports)
-
-3. **`codex-provider`**  
-   Rewrites a managed block at the top of `~/.codex/config.toml` and can restart ChatGPT/Codex Desktop.
-
-4. **Desktop apps**  
-   Thin launchers calling `codex-provider-app-run` → `codex-provider`.
-
-## Codex config (after install)
+`codex-provider` rewrites a managed block at the top of `~/.codex/config.toml`:
 
 ```toml
-[model_providers.xai]
-name = "xAI SuperGrok"
-base_url = "http://127.0.0.1:18765/v1"
-wire_api = "responses"
-
-# When Grok mode is active (managed by codex-provider):
-model = "grok-4.5"
-model_provider = "xai"
-model_catalog_json = "~/.codex/model-catalogs/xai-models.json"
+model = "..."
+model_provider = "..."   # omitted for official OpenAI/ChatGPT auth
+model_catalog_json = "..."  # SuperGrok catalog only
 ```
 
-## Why the model may still say “GPT-5”
+Providers are registered once under `[model_providers.*]`.
 
-Codex injects long developer instructions that start with “You are Codex, an agent based on GPT-5…”.  
-The proxy rewrites many of these strings, but UI / residual prompts can still confuse self-identification.  
-Trust **provider name + proxy logs**, not chat self-description.
+## Channels
+
+| Profile group | Transport |
+|---------------|-----------|
+| openai | Codex built-in ChatGPT / API auth |
+| grok | Local proxy `127.0.0.1:18765` → `cli-chat-proxy.grok.com` with SuperGrok OAuth |
+| claude*, deepseek*, gemini | `https://openrouter.ai/api/v1` + `OPENROUTER_API_KEY`, `wire_api=responses` |
+
+## Why not direct DeepSeek / Anthropic URLs?
+
+Current Codex only speaks the **Responses** wire API. Many vendor “OpenAI-compatible” endpoints only implement Chat Completions. OpenRouter (and similar gateways) expose Responses-compatible routes for third-party models.
+
+## Extending
+
+Edit `~/.codex/ky-profiles.json` (or skill `scripts/profiles.json` then reinstall):
+
+1. Add a profile with `model`, `model_provider`, `requires_env`
+2. Ensure `providers` has the matching provider block
+3. `codex-provider use <new-id>`
+
+## Desktop apps
+
+`make-desktop-apps.sh` builds LSUIElement apps that call `codex-provider-app-run <id|pick>`.

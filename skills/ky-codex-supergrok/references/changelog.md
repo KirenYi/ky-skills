@@ -1,11 +1,14 @@
 # ky-codex-supergrok changelog
 
+## 0.2.0 — 2026-07-21
+
+- **多模型一键切换**：OpenAI / SuperGrok / Claude / Claude Opus / DeepSeek / R1 / Gemini
+- Profile 注册表 `profiles.json` → 安装为 `~/.codex/ky-profiles.json`
+- `codex-provider use|list|pick|status|toggle|keys`
+- OpenRouter provider（Responses）承载 Claude / DeepSeek / Gemini
+- 密钥文件 `~/.codex/ky-provider.env`
+- macOS：主菜单 App「Codex 切换模型」+ 各通道快捷 App
+
 ## 0.1.0 — 2026-07-21
 
-- 首次发布：SuperGrok 订阅通道 + Codex 本地代理
-- `install.sh`：安装 bin、模型目录、provider 配置
-- `codex-provider`：grok / openai / toggle / status
-- macOS 一键 App：`Codex → Grok` / `Codex → OpenAI` / `Codex 切换模型`
-- 请求适配：剥离 Codex 专有 `additional_tools` 等，尽量兼容 SuperGrok Responses
-- 默认绕过系统 HTTP 代理，缓解 VPN Tunnel 503
-- 开发者提示词身份改写（减轻自称 GPT-5）
+- 首次发布：SuperGrok 订阅 + OpenAI 双通道与一键切换

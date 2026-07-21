@@ -1,97 +1,105 @@
 ---
 name: ky-codex-supergrok
 description: |
-  把 OpenAI Codex（桌面端 / CLI）接到 xAI SuperGrok 订阅通道：用 `grok login` 即可，不必买 console.x.ai API。
-  提供本地代理、模型目录、以及「Codex → Grok / OpenAI」一键切换。
-  触发方式：/ky-codex-supergrok、/codex-supergrok、「Codex 接 Grok」「SuperGrok 登录用 Codex」「Codex 一键切换 Grok」「装 SuperGrok 给 Codex」
-  Wire OpenAI Codex Desktop/CLI to SuperGrok subscription (no paid xAI API key) with one-click toggle.
+  把 OpenAI Codex（桌面端/CLI）一键切换到多种模型通道：SuperGrok 订阅、OpenAI/ChatGPT、Claude、DeepSeek、Gemini 等。
+  SuperGrok 用 grok login（非 API Key）；Claude/DeepSeek/Gemini 经 OpenRouter（需 OPENROUTER_API_KEY）。
+  触发：/ky-codex-supergrok、「Codex 切换模型」「Codex 接 Grok」「Codex 用 Claude」「Codex DeepSeek」「一键切换模型」
+  One-click multi-model switcher for Codex Desktop/CLI (SuperGrok + OpenRouter Claude/DeepSeek/…).
 ---
 
 # ky-codex-supergrok
 
-让 **Codex** 使用 **SuperGrok 订阅**（与 Grok Build 同一套 `grok login`），**不是** console.x.ai 按量 API。
+Codex **多模型一键切换**：
+
+| Profile | 通道 | 密钥 |
+|---------|------|------|
+| `openai` | ChatGPT / 官方 Codex 额度 | ChatGPT 登录 |
+| `grok` | SuperGrok 订阅 | `grok login`（非 API） |
+| `claude` / `claude-opus` | OpenRouter → Claude | `OPENROUTER_API_KEY` |
+| `deepseek` / `deepseek-r1` | OpenRouter → DeepSeek | `OPENROUTER_API_KEY` |
+| `gemini` | OpenRouter → Gemini | `OPENROUTER_API_KEY` |
+
+> Codex 现版只支持 `wire_api = "responses"`。DeepSeek/Claude **官方直连**常不兼容，故 API 类模型统一走 **OpenRouter Responses**。
 
 ## 触发后怎么做
 
-按用户意图选一条路径，**直接执行脚本**，不要只给概念说明。
-
-| 用户意图 | 动作 |
-|----------|------|
-| 安装 / 配置 / 修好 | 跑 `install.sh` |
-| 切到 Grok | `~/.codex/bin/codex-provider grok` |
-| 切回 OpenAI | `~/.codex/bin/codex-provider openai` |
-| 来回切 | `codex-provider toggle` |
-| 查状态 / 报错 | `codex-provider status` + `supergrok-proxy status` + 读 log |
-| 只要原理 | 打开 `references/how-it-works.md` 摘要回答 |
+| 意图 | 动作 |
+|------|------|
+| 安装 / 升级 | `bash "$SKILL_ROOT/scripts/install.sh"` |
+| 列出模型 | `~/.codex/bin/codex-provider list` |
+| 切换 | `codex-provider use <id>` 或 `pick` |
+| 状态 | `codex-provider status` |
+| 写密钥 | 编辑 `~/.codex/ky-provider.env` |
 
 ### 路径
 
-- `SKILL_ROOT` = 本文件所在目录
-- 脚本：`$SKILL_ROOT/scripts/`
-- 安装后运行时：`~/.codex/bin/`
+- `SKILL_ROOT` = 本文件目录
+- 安装后：`~/.codex/bin/codex-provider`、`~/.codex/ky-profiles.json`
 
-### 安装（首选）
+### 安装
 
 ```bash
 bash "$SKILL_ROOT/scripts/install.sh"
 ```
 
-安装会：
-
-1. 复制 `supergrok-token` / `supergrok-proxy` / `codex-provider` → `~/.codex/bin/`
-2. 生成 `~/.codex/model-catalogs/xai-models.json`
-3. 在 `~/.codex/config.toml` 注册 `[model_providers.xai]`（若尚未有）
-4. macOS 创建桌面一键 App：`Codex → Grok` / `Codex → OpenAI` / `Codex 切换模型`
-5. 若已有 `~/.grok/auth.json`，启动本地代理并切到 Grok 模式
-
-### 用户前置条件
-
-1. 已装 **Grok Build CLI**，且执行过：`grok login`（SuperGrok / 有订阅）
-2. 已装 **ChatGPT / Codex 桌面端** 或 Codex CLI
-3. Python 3.10+（仅标准库）
-4. **不要**要求用户创建 `XAI_API_KEY`（那是另一条付费 API 路）
-
-### 日常使用
+### 密钥（Claude / DeepSeek / Gemini）
 
 ```bash
-~/.codex/bin/supergrok-proxy start    # 代理常驻
-~/.codex/bin/codex-provider grok      # 默认改成 Grok 并重启桌面端
-# 或双击桌面「Codex → Grok」
+# ~/.codex/ky-provider.env  (chmod 600)
+OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
-CLI 也可用：
+密钥页：https://openrouter.ai/keys  
+
+**不要**把 key 写进 git 或 skill 仓库。
+
+### SuperGrok
 
 ```bash
-codex --profile xai
+grok login
+~/.codex/bin/codex-provider use grok
 ```
 
-**重要：** 切换后让用户 **新建对话**；旧会话可能仍绑旧模型。
+### 一键切换（macOS）
 
-### 如何确认在用 Grok
+- **Codex 切换模型** — 弹出列表任选  
+- **Codex → OpenAI / Grok / Claude / DeepSeek / Gemini** — 直达  
 
-- `codex-provider status` → `mode: grok`，`proxy: running`
-- 桌面端左下角常见 `xAI SuperGrok`，右下角可能显示「自定义」
-- **不要**用「你是什么模型？」当唯一依据（Codex 会注入 GPT-5 人设；代理会尽量改写，仍可能自称 GPT）
-- 看 `~/.codex/supergrok-proxy.log` 是否有 `POST /v1/responses ... 200`
+或：
 
-### 常见故障
+```bash
+codex-provider pick
+codex-provider use claude
+codex-provider use deepseek
+codex-provider use openai
+```
+
+切换后 **新建 Codex 对话**（旧会话可能绑旧模型）。桌面会重启 ChatGPT/Codex。
+
+### 确认
+
+```bash
+codex-provider status
+# mode: claude / grok / …
+```
+
+不要用「你是什么模型」当唯一依据。
+
+### 故障
 
 | 现象 | 处理 |
 |------|------|
-| 502 / Tunnel 503 | 代理默认已绕过系统 VPN 代理；执行 `supergrok-proxy restart`。必须走系统代理时：`SUPERGROK_USE_SYSTEM_PROXY=1 supergrok-proxy restart` |
-| 401 / 要登录 | `grok login`，再 `supergrok-proxy restart` |
-| 代理 not running | `~/.codex/bin/supergrok-proxy start` |
-| 仍走 OpenAI 额度 | `codex-provider grok` 后 **重启桌面端 + 新对话** |
-| 想完全卸载通道 | `codex-provider openai`；`supergrok-proxy stop`；可选删桌面 App；配置备份在 `~/.codex/provider-switch-backups/` |
+| missing OPENROUTER_API_KEY | 写入 `~/.codex/ky-provider.env` |
+| SuperGrok 502 | `supergrok-proxy restart`；先 `grok login` |
+| 仍走旧额度 | `use` 后再新对话 + 确认 status |
+| 模型 404 | 编辑 `~/.codex/ky-profiles.json` 里 OpenRouter slug |
 
-### 安全与合规（必须告诉用户）
+### 安全
 
-- 使用 **订阅 OAuth 会话** 调 `cli-chat-proxy.grok.com`，属于非官方集成，可能随时失效或违反平台条款；用户自负风险。
-- **永不**把 `~/.grok/auth.json`、token、API key 写入仓库或聊天明文日志。
-- 不修改 ChatGPT.app 本体，只改用户级 `~/.codex/` 与本机脚本。
+- 非官方集成；OpenRouter / SuperGrok 条款用户自负  
+- 永不提交 `ky-provider.env`、`auth.json`、token  
+- 不修改 ChatGPT.app 本体  
 
-### 回复风格
+### 回复
 
-- 中文用户用中文；命令与路径保持可复制原文。
-- 安装结束后给：**下一步 3 条** + `status` 摘要。
-- 不要把「付费 API Key」方案当成默认；只有用户明确要 API 时才提。
+中文用户用中文；给可复制命令；安装后列 profile 表 + 下一步（密钥 / grok login / pick）。

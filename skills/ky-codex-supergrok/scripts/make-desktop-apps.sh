@@ -1,12 +1,23 @@
 #!/usr/bin/env bash
-# Create double-clickable macOS apps for Codex SuperGrok / OpenAI switch.
+# Create double-clickable macOS apps for multi-profile Codex switching.
 set -euo pipefail
 BIN="${CODEX_BIN_DIR:-$HOME/.codex/bin}"
 DESTS=("$HOME/Desktop" "$HOME/Applications")
+PROFILES_JSON="${1:-$BIN/../ky-profiles.json}"
+if [[ ! -f "$PROFILES_JSON" ]]; then
+  # fallback next to installed skill scripts copy
+  for c in \
+    "$HOME/.codex/ky-profiles.json" \
+    "$(cd "$(dirname "$0")" && pwd)/profiles.json"
+  do
+    [[ -f "$c" ]] && PROFILES_JSON="$c" && break
+  done
+fi
 
 make_app() {
   local name="$1" mode="$2" dest_root="$3"
   local app="$dest_root/${name}.app"
+  rm -rf "$app"
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
   cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -17,7 +28,7 @@ make_app() {
   <key>CFBundleIdentifier</key><string>local.ky.codex.provider.${mode}</string>
   <key>CFBundleName</key><string>${name}</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleShortVersionString</key><string>2.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
@@ -34,7 +45,11 @@ LAUNCH
 
 for dest in "${DESTS[@]}"; do
   mkdir -p "$dest"
-  make_app "Codex → Grok" "grok" "$dest"
+  # Master picker first
+  make_app "Codex 切换模型" "pick" "$dest"
   make_app "Codex → OpenAI" "openai" "$dest"
-  make_app "Codex 切换模型" "toggle" "$dest"
+  make_app "Codex → Grok" "grok" "$dest"
+  make_app "Codex → Claude" "claude" "$dest"
+  make_app "Codex → DeepSeek" "deepseek" "$dest"
+  make_app "Codex → Gemini" "gemini" "$dest"
 done

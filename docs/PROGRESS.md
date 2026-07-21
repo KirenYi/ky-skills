@@ -24,6 +24,32 @@
 
 ---
 
+## 2026-07-21 08:10 PDT — Grok — ky-codex-supergrok 多模型一键切换
+
+- **操作者**：Grok
+- **目标**：在 SuperGrok/OpenAI 之外加入 Claude、DeepSeek、Gemini 等一键切换
+- **已完成**：
+  - `profiles.json` 多 profile 注册表
+  - `codex-provider use|list|pick|status|toggle|keys`
+  - OpenRouter provider（Responses）承载 Claude/DeepSeek/Gemini
+  - 密钥文件 `~/.codex/ky-provider.env` + 桌面多通道 App
+  - 文档与 skill VERSION 0.2.0
+- **改动路径**：
+  - `skills/ky-codex-supergrok/**`
+  - `README.md`
+  - `docs/PROGRESS.md`
+  - `VERSION`
+- **验证**：
+  - `bash -n` codex-provider / install
+  - 本机 `install.sh` + `codex-provider list`
+- **未完成 / 下一步**：
+  - 用户自备 OPENROUTER_API_KEY 后验证 Claude/DeepSeek 实请求
+- **风险或注意**：
+  - 直连 DeepSeek/Anthropic 与 Codex Responses 不兼容，故走 OpenRouter
+  - 勿提交 ky-provider.env
+
+---
+
 ## 2026-07-21 07:25 PDT — Grok — 新增 ky-codex-supergrok
 
 - **操作者**：Grok
