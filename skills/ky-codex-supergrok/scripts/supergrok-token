@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Print a valid SuperGrok/OAuth access token from ~/.grok/auth.json.
+
+Refreshes via auth.x.ai when the access token is expired or near expiry.
+Does NOT use console.x.ai API keys (no separate API billing).
+"""
+from __future__ import annotations
+
+import json
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+AUTH_PATH = Path.home() / ".grok" / "auth.json"
+
+def http_open(req_or_url, timeout=30, data=None, headers=None, method=None):
+    """Open URL without system HTTP proxy (avoids VPN tunnel 503s)."""
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    if isinstance(req_or_url, str):
+        req = urllib.request.Request(req_or_url, data=data, headers=headers or {}, method=method)
+    else:
+        req = req_or_url
+    return opener.open(req, timeout=timeout)
+
+EARLY_REFRESH_SECS = 300  # refresh 5 minutes before expiry
+
+
+def die(msg: str, code: int = 1) -> None:
+    print(msg, file=sys.stderr)
+    raise SystemExit(code)
+
+
+def load_auth() -> tuple[str, dict]:
+    if not AUTH_PATH.exists():
+        die("No ~/.grok/auth.json found. Run: grok login")
+    data = json.loads(AUTH_PATH.read_text())
+    if not data:
+        die("Empty ~/.grok/auth.json. Run: grok login")
+    key = next(iter(data))
+    return key, data[key]
+
+
+def save_auth(key: str, entry: dict, full: dict) -> None:
+    full[key] = entry
+    AUTH_PATH.write_text(json.dumps(full, indent=2) + "\n")
+    try:
+        AUTH_PATH.chmod(0o600)
+    except OSError:
+        pass
+
+
+def token_exp(token: str) -> int | None:
+    try:
+        import base64
+
+        part = token.split(".")[1]
+        part += "=" * (-len(part) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(part))
+        return int(payload.get("exp") or 0) or None
+    except Exception:
+        return None
+
+
+def refresh(entry: dict) -> dict:
+    refresh_token = entry.get("refresh_token")
+    client_id = entry.get("oidc_client_id")
+    issuer = entry.get("oidc_issuer") or "https://auth.x.ai"
+    if not refresh_token or not client_id:
+        die("Missing refresh_token/client_id. Run: grok login")
+
+    # discover token endpoint
+    try:
+        with http_open(
+            f"{issuer.rstrip('/')}/.well-known/openid-configuration", timeout=20
+        ) as r:
+            cfg = json.load(r)
+        token_url = cfg.get("token_endpoint") or f"{issuer.rstrip('/')}/oauth2/token"
+    except Exception:
+        token_url = f"{issuer.rstrip('/')}/oauth2/token"
+
+    body = urllib.parse.urlencode(
+        {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": client_id,
+        }
+    ).encode()
+    req = urllib.request.Request(
+        token_url,
+        data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    try:
+        with http_open(req, timeout=30) as r:
+            j = json.load(r)
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:300]
+        die(f"Token refresh failed ({e.code}). Run: grok login\n{detail}")
+    except Exception as e:
+        die(f"Token refresh failed: {e}. Run: grok login")
+
+    access = j.get("access_token")
+    if not access:
+        die("Token refresh returned no access_token. Run: grok login")
+    entry["key"] = access
+    if j.get("refresh_token"):
+        entry["refresh_token"] = j["refresh_token"]
+    expires_in = int(j.get("expires_in") or 21600)
+    entry["expires_at"] = time.strftime(
+        "%Y-%m-%dT%H:%M:%S.000000Z", time.gmtime(time.time() + expires_in)
+    )
+    return entry
+
+
+def main() -> None:
+    key, entry = load_auth()
+    full = json.loads(AUTH_PATH.read_text())
+    token = entry.get("key") or ""
+    exp = token_exp(token)
+    now = int(time.time())
+    if not token or exp is None or exp <= now + EARLY_REFRESH_SECS:
+        entry = refresh(entry)
+        save_auth(key, entry, full)
+        token = entry["key"]
+    # print token only on stdout
+    sys.stdout.write(token)
+
+
+if __name__ == "__main__":
+    main()

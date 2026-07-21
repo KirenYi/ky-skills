@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Called by Codex switcher .app bundles. No interactive terminal required.
+set -euo pipefail
+export PATH="$HOME/.codex/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+MODE="${1:-toggle}"
+LOG="$HOME/.codex/provider-switch.log"
+{
+  echo "==== $(date '+%Y-%m-%d %H:%M:%S') app-run mode=$MODE ===="
+  "$HOME/.codex/bin/codex-provider" "$MODE"
+} >>"$LOG" 2>&1 || {
+  osascript -e 'display notification "切换失败，请看 ~/.codex/provider-switch.log" with title "Codex 模型切换"' 2>/dev/null || true
+  exit 1
+}
+exit 0

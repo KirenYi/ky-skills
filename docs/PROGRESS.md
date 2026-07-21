@@ -24,6 +24,32 @@
 
 ---
 
+## 2026-07-21 07:25 PDT — Grok — 新增 ky-codex-supergrok
+
+- **操作者**：Grok
+- **目标**：把 Codex ↔ SuperGrok 订阅通道与一键切换做成可发布 skill
+- **已完成**：
+  - 新增 `skills/ky-codex-supergrok/`（SKILL/README/scripts/references）
+  - 安装脚本：本地代理、token 刷新、config provider、macOS 桌面一键 App
+  - 更新根 README skill 表与 AGENTS 已发布列表
+- **改动路径**：
+  - `skills/ky-codex-supergrok/**`
+  - `README.md`
+  - `AGENTS.md`
+  - `docs/PROGRESS.md`
+  - `VERSION`
+- **验证**：
+  - `bash -n` 安装与切换脚本
+  - `python3 -m py_compile` proxy/token
+  - `./scripts/install-links.sh --dry-run ky-codex-supergrok`
+- **未完成 / 下一步**：
+  - 推送到 GitHub main
+- **风险或注意**：
+  - 非官方 SuperGrok 订阅代理集成；文档已标明风险与非 API Key 路径
+  - 勿提交 `~/.grok/auth.json` 或任何 token
+
+---
+
 ## 2026-07-21 — Grok — 去掉对外「挂靠第三方」表述，改为自有产品说明
 
 - **操作者**：Grok

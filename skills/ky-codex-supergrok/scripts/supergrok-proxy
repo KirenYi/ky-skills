@@ -1,0 +1,544 @@
+#!/usr/bin/env python3
+"""Local reverse proxy: SuperGrok subscription auth for Codex.
+
+Codex -> http://127.0.0.1:18765/v1/* -> https://cli-chat-proxy.grok.com/v1/*
+
+Auth: `grok login` session in ~/.grok/auth.json (SuperGrok), NOT console.x.ai API keys.
+Also adapts Codex Responses request shapes that SuperGrok's proxy rejects.
+"""
+from __future__ import annotations
+
+import json
+import re
+import os
+import signal
+import subprocess
+import sys
+import threading
+import time
+import urllib.error
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+HOST = "127.0.0.1"
+PORT = int(os.environ.get("SUPERGROK_PROXY_PORT", "18765"))
+UPSTREAM = os.environ.get(
+    "SUPERGROK_PROXY_UPSTREAM", "https://cli-chat-proxy.grok.com"
+).rstrip("/")
+TOKEN_BIN = Path.home() / ".codex" / "bin" / "supergrok-token"
+PID_PATH = Path.home() / ".codex" / "supergrok-proxy.pid"
+LOG_PATH = Path.home() / ".codex" / "supergrok-proxy.log"
+CLIENT_VERSION = os.environ.get("SUPERGROK_CLIENT_VERSION", "0.2.106")
+CLIENT_SURFACE = os.environ.get("SUPERGROK_CLIENT_SURFACE", "grok-build")
+# Bypass macOS/system HTTP(S) proxies by default. User VPN local proxies (e.g.
+# 127.0.0.1:1082) often break HTTPS CONNECT with "Tunnel connection failed: 503".
+# Set SUPERGROK_USE_SYSTEM_PROXY=1 if you must egress via a proxy.
+USE_SYSTEM_PROXY = os.environ.get("SUPERGROK_USE_SYSTEM_PROXY", "0") in ("1", "true", "yes")
+
+def make_opener():
+    if USE_SYSTEM_PROXY:
+        return urllib.request.build_opener()
+    return urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+_token_lock = threading.Lock()
+_cached_token: str | None = None
+_cached_at = 0.0
+
+
+def log(msg: str) -> None:
+    line = time.strftime("%Y-%m-%d %H:%M:%S") + " " + msg
+    try:
+        with LOG_PATH.open("a") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+
+
+def get_token(force: bool = False) -> str:
+    global _cached_token, _cached_at
+    with _token_lock:
+        if not force and _cached_token and (time.time() - _cached_at) < 60:
+            return _cached_token
+        out = subprocess.check_output([str(TOKEN_BIN)], text=True).strip()
+        if not out:
+            raise RuntimeError("empty token from supergrok-token")
+        _cached_token = out
+        _cached_at = time.time()
+        return out
+
+
+def convert_tool(tool: dict) -> dict | None:
+    if not isinstance(tool, dict):
+        return None
+    t = tool.get("type")
+    if t == "function":
+        # keep OpenAI function tool shape
+        out = {"type": "function"}
+        # support both nested and flat forms
+        if "function" in tool and isinstance(tool["function"], dict):
+            out["function"] = tool["function"]
+        else:
+            out["name"] = tool.get("name")
+            if tool.get("description") is not None:
+                out["description"] = tool.get("description")
+            if tool.get("parameters") is not None:
+                out["parameters"] = tool.get("parameters")
+            elif tool.get("input_schema") is not None:
+                out["parameters"] = tool.get("input_schema")
+            else:
+                out["parameters"] = {"type": "object", "properties": {}}
+        return out
+    if t == "custom":
+        # SuperGrok does not accept Codex freeform custom tools; map to function.
+        name = tool.get("name") or "custom_tool"
+        desc = tool.get("description") or name
+        return {
+            "type": "function",
+            "name": name,
+            "description": desc[:4000],
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "input": {
+                        "type": "string",
+                        "description": "Tool input (string or JSON-encoded payload).",
+                    }
+                },
+                "required": ["input"],
+                "additionalProperties": True,
+            },
+        }
+    if t == "namespace":
+        # expand namespaced tools if present
+        nested = tool.get("tools") or tool.get("functions") or []
+        # handled by caller
+        return None
+    # drop web_search / host-native tools SuperGrok won't have
+    if t in {"web_search", "web_search_preview", "file_search", "code_interpreter", "image_generation", "computer", "local_shell", "shell"}:
+        return {
+            "type": "function",
+            "name": tool.get("name") or t,
+            "description": tool.get("description") or f"Codex host tool stub for {t}",
+            "parameters": {"type": "object", "properties": {}, "additionalProperties": True},
+        }
+    return None
+
+
+def expand_tools(tools: list) -> list:
+    out = []
+    for tool in tools or []:
+        if not isinstance(tool, dict):
+            continue
+        if tool.get("type") == "namespace":
+            for nested in tool.get("tools") or tool.get("functions") or []:
+                c = convert_tool(nested if isinstance(nested, dict) else {"type": "function", **(nested or {})})
+                if c:
+                    out.append(c)
+            continue
+        c = convert_tool(tool)
+        if c:
+            out.append(c)
+    # de-dupe by name
+    seen = set()
+    deduped = []
+    for t in out:
+        name = t.get("name") or (t.get("function") or {}).get("name")
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        deduped.append(t)
+    return deduped
+
+
+
+IDENTITY_REWRITE_RULES = [
+    # Codex hardcodes GPT identity into developer instructions even for custom providers.
+    (r"an agent based on GPT-5", "an agent based on Grok 4.5 (xAI SuperGrok)"),
+    (r"an agent based on GPT-4o?", "an agent based on Grok 4.5 (xAI SuperGrok)"),
+    (r"based on GPT-5\.?\d*(?:-\w+)?", "based on Grok 4.5 (xAI SuperGrok)"),
+    (r"You are Codex, an agent based on GPT-[^\.\n]+", "You are Codex, an agent based on Grok 4.5 (xAI SuperGrok)"),
+]
+
+IDENTITY_PREFIX = (
+    "[SuperGrok identity override]\n"
+    "You are running on Grok 4.5 via xAI SuperGrok subscription (cli-chat-proxy).\n"
+    "You are NOT GPT-5 / GPT-4 / OpenAI API. If asked what model you are, say: "
+    "Codex agent on Grok 4.5 (xAI SuperGrok).\n\n"
+)
+
+
+def rewrite_identity_text(text: str) -> str:
+    if not isinstance(text, str) or not text:
+        return text
+    out = text
+    for pat, repl in IDENTITY_REWRITE_RULES:
+        out = re.sub(pat, repl, out, flags=re.IGNORECASE)
+    # Broad identity swaps inside the main agent system prompt only
+    if "You are Codex" in out or "coding agent" in out.lower():
+        out = re.sub(r"\bGPT-5(?:\.\d+)?(?:-\w+)*\b", "Grok 4.5", out)
+        out = re.sub(r"\bGPT-4o?\b", "Grok 4.5", out)
+        out = re.sub(r"OpenAI\'s? frontier model", "xAI Grok 4.5", out, flags=re.I)
+    if "You are Codex" in out and not out.startswith("[SuperGrok identity override]"):
+        out = IDENTITY_PREFIX + out
+    return out
+
+
+def rewrite_input_identities(d: dict) -> None:
+    inp = d.get("input")
+    if not isinstance(inp, list):
+        return
+    for item in inp:
+        if not isinstance(item, dict):
+            continue
+        if item.get("type") not in (None, "message") and item.get("type") != "message":
+            # only message-like
+            if item.get("type") not in ("message",):
+                continue
+        role = item.get("role")
+        if role not in ("developer", "system"):
+            continue
+        content = item.get("content")
+        if isinstance(content, str):
+            item["content"] = rewrite_identity_text(content)
+        elif isinstance(content, list):
+            for c in content:
+                if isinstance(c, dict) and isinstance(c.get("text"), str):
+                    c["text"] = rewrite_identity_text(c["text"])
+
+def adapt_responses_body(raw: bytes) -> bytes:
+    """Adapt Codex Responses body to SuperGrok-compatible shape."""
+    try:
+        d = json.loads(raw)
+    except Exception:
+        return raw
+    if not isinstance(d, dict):
+        return raw
+
+    # Strip fields SuperGrok rejects or ignores badly
+    for k in ("client_metadata", "prompt_cache_key"):
+        d.pop(k, None)
+
+    # include: only keep safe values
+    if "include" in d:
+        include = d.get("include") or []
+        if isinstance(include, list):
+            safe = [x for x in include if x in ("message.output_text.logprobs",)]
+            if safe:
+                d["include"] = safe
+            else:
+                d.pop("include", None)
+
+    # reasoning: only effort
+    if isinstance(d.get("reasoning"), dict):
+        effort = d["reasoning"].get("effort")
+        if effort:
+            d["reasoning"] = {"effort": effort}
+        else:
+            d.pop("reasoning", None)
+
+    # text.verbosity may be OpenAI-only
+    if isinstance(d.get("text"), dict):
+        d.pop("text", None)
+
+    tools = list(d.get("tools") or [])
+    new_input = []
+    inp = d.get("input")
+    if isinstance(inp, list):
+        for item in inp:
+            if not isinstance(item, dict):
+                new_input.append(item)
+                continue
+            t = item.get("type")
+            if t == "additional_tools":
+                tools.extend(item.get("tools") or [])
+                continue
+            # keep standard message / function call items
+            new_input.append(item)
+        d["input"] = new_input
+    elif isinstance(inp, str):
+        pass
+
+    tools = expand_tools(tools)
+    if tools:
+        d["tools"] = tools
+    else:
+        d.pop("tools", None)
+        # tool_choice without tools is invalid on SuperGrok
+        if d.get("tool_choice") not in (None, "none"):
+            d.pop("tool_choice", None)
+
+    # store true may be fine; stream must remain
+    if "stream" not in d:
+        d["stream"] = True
+
+    # Codex injects "based on GPT-5" even for custom providers — rewrite for honesty.
+    rewrite_input_identities(d)
+
+    return json.dumps(d, ensure_ascii=False).encode()
+
+
+def upstream_headers(token: str, incoming: dict[str, str]) -> dict[str, str]:
+    h = {
+        "Authorization": f"Bearer {token}",
+        "X-XAI-Token-Auth": "xai-grok-cli",
+        "x-grok-client-version": CLIENT_VERSION,
+        "x-grok-client-surface": CLIENT_SURFACE,
+        "User-Agent": f"codex-supergrok-proxy/{CLIENT_VERSION}",
+        "Accept": incoming.get("Accept", "text/event-stream, application/json"),
+    }
+    if "Content-Type" in incoming:
+        h["Content-Type"] = incoming["Content-Type"]
+    if "x-grok-model-override" in incoming:
+        h["x-grok-model-override"] = incoming["x-grok-model-override"]
+    return h
+
+
+class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, fmt: str, *args) -> None:
+        log("proxy: " + (fmt % args))
+
+    def _read_body(self) -> bytes:
+        n = int(self.headers.get("Content-Length") or 0)
+        return self.rfile.read(n) if n > 0 else b""
+
+    def _incoming_headers(self) -> dict[str, str]:
+        return {k: v for k, v in self.headers.items()}
+
+    def _proxy(self, method: str) -> None:
+        path = self.path
+        if not path.startswith("/"):
+            path = "/" + path
+        url = UPSTREAM + path
+        body = self._read_body() if method in ("POST", "PUT", "PATCH") else None
+        incoming = self._incoming_headers()
+
+        if body and path.split("?")[0].endswith("/responses"):
+            try:
+                body = adapt_responses_body(body)
+                (Path.home() / ".codex" / "supergrok-last-adapted.json").write_bytes(body)
+            except Exception as e:
+                log(f"adapt error: {e}")
+
+        def do_req(token: str):
+            req = urllib.request.Request(
+                url,
+                data=body,
+                headers=upstream_headers(token, incoming),
+                method=method,
+            )
+            return make_opener().open(req, timeout=600)
+
+        try:
+            token = get_token()
+            try:
+                resp = do_req(token)
+            except urllib.error.HTTPError as e:
+                if e.code == 401:
+                    token = get_token(force=True)
+                    try:
+                        resp = do_req(token)
+                    except urllib.error.HTTPError as e2:
+                        data = e2.read()
+                        self.send_response(e2.code)
+                        self.send_header(
+                            "Content-Type",
+                            e2.headers.get("Content-Type", "application/json"),
+                        )
+                        self.send_header("Content-Length", str(len(data)))
+                        self.send_header("Connection", "close")
+                        self.end_headers()
+                        self.wfile.write(data)
+                        return
+                else:
+                    data = e.read()
+                    log(f"upstream {e.code}: {data[:500]!r}")
+                    self.send_response(e.code)
+                    self.send_header(
+                        "Content-Type", e.headers.get("Content-Type", "application/json")
+                    )
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Connection", "close")
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+
+            self.send_response(resp.status)
+            ctype = resp.headers.get("Content-Type", "application/json")
+            self.send_header("Content-Type", ctype)
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "close")
+            if "text/event-stream" not in ctype and resp.headers.get("Content-Length"):
+                self.send_header("Content-Length", resp.headers.get("Content-Length"))
+            self.end_headers()
+
+            while True:
+                chunk = resp.read(16384)
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+                self.wfile.flush()
+            resp.close()
+        except Exception as e:
+            log(f"error {method} {path}: {e}")
+            msg = json.dumps(
+                {"error": {"message": str(e), "type": "supergrok_proxy_error"}}
+            ).encode()
+            self.send_response(502)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(msg)))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(msg)
+
+    def do_GET(self) -> None:
+        self._proxy("GET")
+
+    def do_POST(self) -> None:
+        self._proxy("POST")
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        self.end_headers()
+
+
+def is_running() -> bool:
+    if not PID_PATH.exists():
+        return False
+    try:
+        pid = int(PID_PATH.read_text().strip())
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        return False
+
+
+def start_foreground() -> None:
+    try:
+        get_token()
+    except Exception as e:
+        print(f"Auth failed: {e}", file=sys.stderr)
+        print("Run: grok login", file=sys.stderr)
+        raise SystemExit(1)
+    ThreadingHTTPServer.allow_reuse_address = True
+    httpd = ThreadingHTTPServer((HOST, PORT), Handler)
+    PID_PATH.write_text(str(os.getpid()))
+    log(f"listening on http://{HOST}:{PORT} -> {UPSTREAM}")
+    print(f"SuperGrok proxy on http://{HOST}:{PORT} (upstream {UPSTREAM})")
+
+    def _stop(*_):
+        log("shutting down")
+        threading.Thread(target=httpd.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, _stop)
+    signal.signal(signal.SIGINT, _stop)
+    try:
+        httpd.serve_forever(poll_interval=0.5)
+    finally:
+        httpd.server_close()
+        if PID_PATH.exists():
+            try:
+                if PID_PATH.read_text().strip() == str(os.getpid()):
+                    PID_PATH.unlink()
+            except OSError:
+                pass
+
+
+def start_background() -> None:
+    if is_running():
+        print(f"already running on http://{HOST}:{PORT}")
+        return
+    subprocess.check_call(
+        [str(TOKEN_BIN)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE
+    )
+    logf = LOG_PATH.open("a")
+    proc = subprocess.Popen(
+        [sys.executable, str(Path(__file__).resolve()), "run"],
+        stdout=logf,
+        stderr=logf,
+        start_new_session=True,
+    )
+    import socket
+
+    for _ in range(50):
+        time.sleep(0.1)
+        if is_running():
+            print(f"started pid={proc.pid} http://{HOST}:{PORT}")
+            return
+        try:
+            with socket.create_connection((HOST, PORT), timeout=0.2):
+                print(f"started pid={proc.pid} http://{HOST}:{PORT}")
+                return
+        except OSError:
+            pass
+    print("proxy failed to start; see ~/.codex/supergrok-proxy.log", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def stop() -> None:
+    stopped = False
+    if PID_PATH.exists():
+        try:
+            pid = int(PID_PATH.read_text().strip())
+            os.kill(pid, signal.SIGTERM)
+            print(f"stopped pid={pid}")
+            stopped = True
+        except ProcessLookupError:
+            pass
+        except Exception as e:
+            print(f"stop pid file error: {e}", file=sys.stderr)
+        try:
+            PID_PATH.unlink()
+        except OSError:
+            pass
+    try:
+        out = subprocess.check_output(
+            ["lsof", f"-iTCP:{PORT}", "-sTCP:LISTEN", "-t"], text=True
+        ).strip()
+        for pid_s in out.splitlines():
+            try:
+                os.kill(int(pid_s), signal.SIGTERM)
+                print(f"stopped listener pid={pid_s}")
+                stopped = True
+            except Exception:
+                pass
+    except Exception:
+        pass
+    if not stopped:
+        print("not running")
+
+
+def status() -> None:
+    if is_running():
+        print(f"running pid={PID_PATH.read_text().strip()} http://{HOST}:{PORT}")
+    else:
+        print("not running")
+
+
+def main() -> None:
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "run"
+    if cmd == "run":
+        start_foreground()
+    elif cmd == "start":
+        start_background()
+    elif cmd == "stop":
+        stop()
+    elif cmd == "status":
+        status()
+    elif cmd == "restart":
+        stop()
+        time.sleep(0.3)
+        start_background()
+    else:
+        print("usage: supergrok-proxy [run|start|stop|status|restart]")
+        raise SystemExit(2)
+
+
+if __name__ == "__main__":
+    main()

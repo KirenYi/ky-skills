@@ -1,0 +1,226 @@
+#!/usr/bin/env bash
+# Switch Codex Desktop/CLI default model between SuperGrok and OpenAI.
+# Usage:
+#   codex-provider status
+#   codex-provider grok
+#   codex-provider openai
+#   codex-provider toggle
+#   codex-provider grok --no-restart
+set -euo pipefail
+
+CONFIG="${CODEX_HOME:-$HOME/.codex}/config.toml"
+STATE="${CODEX_HOME:-$HOME/.codex}/provider-mode"
+PROXY="$HOME/.codex/bin/supergrok-proxy"
+BACKUP_DIR="${CODEX_HOME:-$HOME/.codex}/provider-switch-backups"
+APP_NAME="${CODEX_DESKTOP_APP:-ChatGPT}"
+
+mkdir -p "$BACKUP_DIR"
+
+notify() {
+  local title="$1" body="$2"
+  osascript -e "display notification \"${body//\"/\\\"}\" with title \"${title//\"/\\\"}\"" 2>/dev/null || true
+  echo "$title: $body"
+}
+
+current_mode() {
+  if [[ -f "$STATE" ]]; then
+    cat "$STATE"
+    return
+  fi
+  if grep -qE '^[[:space:]]*model_provider[[:space:]]*=[[:space:]]*"xai"' "$CONFIG" 2>/dev/null; then
+    echo grok
+  else
+    echo openai
+  fi
+}
+
+backup_config() {
+  local ts
+  ts=$(date +%Y%m%d-%H%M%S)
+  cp "$CONFIG" "$BACKUP_DIR/config.toml.$ts"
+  # keep last 10
+  ls -1t "$BACKUP_DIR"/config.toml.* 2>/dev/null | tail -n +11 | xargs -I{} rm -f {} 2>/dev/null || true
+}
+
+# Rewrite top-level model selection keys without touching the rest of the file.
+apply_mode() {
+  local mode="$1"
+  python3 - "$CONFIG" "$mode" <<'PY'
+import re, sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+mode = sys.argv[2]
+text = path.read_text()
+
+# Remove previous switcher-managed top-level keys (only unindented assignments near file start / anywhere at root)
+# We rewrite by stripping existing root keys we manage, then inserting a managed block after any leading comments.
+
+managed_keys = {
+    "model",
+    "model_provider",
+    "model_catalog_json",
+    "model_reasoning_effort",
+    "service_tier",
+}
+
+lines = text.splitlines(keepends=True)
+out = []
+i = 0
+# Drop old managed block markers and managed root keys outside tables
+in_table = False
+skip_until_end_marker = False
+while i < len(lines):
+    line = lines[i]
+    stripped = line.strip()
+
+    if stripped == "# --- codex-provider-switcher:begin ---":
+        skip_until_end_marker = True
+        i += 1
+        continue
+    if skip_until_end_marker:
+        if stripped == "# --- codex-provider-switcher:end ---":
+            skip_until_end_marker = False
+        i += 1
+        continue
+
+    # track tables: lines starting with [ mean inside a table section for subsequent indented? 
+    # In TOML, keys at beginning of line without leading spaces after a [table] belong to that table.
+    if stripped.startswith("["):
+        in_table = True
+        out.append(line)
+        i += 1
+        continue
+
+    # blank lines / comments don't change in_table for root-only deletion before first table
+    if not in_table and stripped and not stripped.startswith("#"):
+        m = re.match(r'^([A-Za-z0-9_\.\-]+)\s*=', stripped)
+        if m and m.group(1) in managed_keys:
+            i += 1
+            continue
+
+    out.append(line)
+    i += 1
+
+body = "".join(out).lstrip("\n")
+
+if mode == "grok":
+    block = """# --- codex-provider-switcher:begin ---
+# Active: SuperGrok (subscription via local proxy). Toggle with: codex-provider openai
+model = "grok-4.5"
+model_provider = "xai"
+model_catalog_json = "~/.codex/model-catalogs/xai-models.json"
+model_reasoning_effort = "high"
+# --- codex-provider-switcher:end ---
+"""
+else:
+    block = """# --- codex-provider-switcher:begin ---
+# Active: OpenAI / ChatGPT Codex. Toggle with: codex-provider grok
+model = "gpt-5.6-sol"
+model_reasoning_effort = "high"
+service_tier = "fast"
+# model_provider left default (OpenAI/ChatGPT auth)
+# --- codex-provider-switcher:end ---
+"""
+
+path.write_text(block + "\n" + body)
+print(f"config set to {mode}")
+PY
+  echo "$mode" > "$STATE"
+}
+
+restart_desktop() {
+  if [[ "${NO_RESTART:-0}" == "1" ]]; then
+    echo "skip restart (--no-restart)"
+    return
+  fi
+  # Quit if running, then reopen
+  if pgrep -x "ChatGPT" >/dev/null 2>&1 || pgrep -if "ChatGPT" >/dev/null 2>&1; then
+    osascript -e "tell application \"$APP_NAME\" to quit" 2>/dev/null || true
+    # wait up to 8s
+    for _ in $(seq 1 16); do
+      if ! pgrep -x "ChatGPT" >/dev/null 2>&1; then break; fi
+      sleep 0.5
+    done
+    # force if needed
+    pkill -x "ChatGPT" 2>/dev/null || true
+    sleep 0.5
+  fi
+  open -a "$APP_NAME" 2>/dev/null || open -a "ChatGPT" 2>/dev/null || true
+}
+
+switch_grok() {
+  backup_config
+  # ensure proxy
+  if [[ -x "$PROXY" ]]; then
+    # Avoid VPN local HTTP proxy env leaking into the SuperGrok proxy process
+    env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u all_proxy       "$PROXY" start >/dev/null 2>&1       || env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u all_proxy            "$PROXY" restart >/dev/null 2>&1       || true
+  fi
+  apply_mode grok
+  restart_desktop
+  notify "Codex → Super Grok" "已切换到 grok-4.5。请新建对话使用（勿用旧 OpenAI 会话）。"
+}
+
+switch_openai() {
+  backup_config
+  apply_mode openai
+  restart_desktop
+  notify "Codex → OpenAI" "已切回 gpt-5.6-sol（ChatGPT 额度）。"
+}
+
+status() {
+  local mode
+  mode=$(current_mode)
+  echo "mode: $mode"
+  echo "state file: $STATE ($(cat "$STATE" 2>/dev/null || echo none))"
+  if [[ -x "$PROXY" ]]; then
+    echo -n "proxy: "; "$PROXY" status || true
+  fi
+  echo "config model lines:"
+  grep -nE '^(model|model_provider|model_catalog_json|model_reasoning_effort|service_tier)[[:space:]]*=' "$CONFIG" | head -20 || true
+  if grep -q 'codex-provider-switcher:begin' "$CONFIG"; then
+    echo "--- managed block ---"
+    sed -n '/codex-provider-switcher:begin/,/codex-provider-switcher:end/p' "$CONFIG"
+  fi
+}
+
+usage() {
+  cat <<USAGE
+Usage: codex-provider <status|grok|openai|toggle> [--no-restart]
+
+  grok     SuperGrok (local proxy + grok-4.5), restart ChatGPT/Codex
+  openai   OpenAI gpt-5.6-sol, restart ChatGPT/Codex
+  toggle   Switch to the other mode
+  status   Show current mode
+
+Env:
+  CODEX_DESKTOP_APP   default ChatGPT
+  NO_RESTART=1        do not quit/reopen the desktop app
+USAGE
+}
+
+NO_RESTART=0
+ARGS=()
+for a in "$@"; do
+  case "$a" in
+    --no-restart) NO_RESTART=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) ARGS+=("$a") ;;
+  esac
+done
+set -- "${ARGS[@]:-}"
+
+cmd="${1:-status}"
+case "$cmd" in
+  status) status ;;
+  grok|xai|supergrok) switch_grok ;;
+  openai|chatgpt|sol) switch_openai ;;
+  toggle)
+    if [[ "$(current_mode)" == "grok" ]]; then
+      switch_openai
+    else
+      switch_grok
+    fi
+    ;;
+  *) usage; exit 2 ;;
+esac
