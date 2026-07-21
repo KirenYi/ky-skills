@@ -1,5 +1,13 @@
 # ky-codex-supergrok changelog
 
+## 0.3.0 — 2026-07-21
+
+- **首次缺 Key 弹窗**：粘贴 OpenRouter Key / 查看教程 / 取消
+- **「Codex 使用教程」App** + 离线图文 `references/tutorials/index.html`
+- 切换菜单首项：**不会使用？打开教程**
+- **API 模型合集** profile + OpenRouter 多模型 catalog（便于列表内切换）
+- 失败时桌面 App 提示并引导打开教程
+
 ## 0.2.0 — 2026-07-21
 
 - **多模型一键切换**：OpenAI / SuperGrok / Claude / Claude Opus / DeepSeek / R1 / Gemini

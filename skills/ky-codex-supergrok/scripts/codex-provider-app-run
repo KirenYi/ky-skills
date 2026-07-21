@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Called by Codex switcher .app bundles.
 set -euo pipefail
 export PATH="$HOME/.codex/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 MODE="${1:-pick}"
@@ -9,15 +8,24 @@ LOG="$HOME/.codex/provider-switch.log"
   if [[ -f "$HOME/.codex/ky-provider.env" ]]; then
     set -a
     # shellcheck disable=SC1090
-    source "$HOME/.codex/ky-provider.env"
+    source "$HOME/.codex/ky-provider.env" || true
     set +a
   fi
   case "$MODE" in
     pick|menu) "$HOME/.codex/bin/codex-provider" pick ;;
+    tutorial|help) "$HOME/.codex/bin/codex-provider" tutorial ;;
     *) "$HOME/.codex/bin/codex-provider" use "$MODE" ;;
   esac
 } >>"$LOG" 2>&1 || {
-  osascript -e 'display notification "切换失败，请看 ~/.codex/provider-switch.log" with title "Codex 模型切换"' 2>/dev/null || true
+  # On failure, offer tutorial
+  osascript <<'APPLESCRIPT' 2>/dev/null || true
+set btn to button returned of (display alert "切换未完成" message "可能是还没配置 API，或 SuperGrok 未登录。
+
+要点「查看教程」按步骤操作。" buttons {"关闭", "查看教程"} default button "查看教程" as warning)
+if btn is "查看教程" then
+  do shell script "$HOME/.codex/bin/codex-provider tutorial"
+end if
+APPLESCRIPT
   exit 1
 }
 exit 0

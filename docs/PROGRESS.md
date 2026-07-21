@@ -24,6 +24,26 @@
 
 ---
 
+## 2026-07-21 09:00 PDT — Grok — 多模型切换 UX：弹窗填 Key + 图文教程
+
+- **操作者**：Grok
+- **目标**：让非技术用户点按钮即可切换；缺 API 时引导填写并提供「不会使用怎么办」教程
+- **已完成**：
+  - 首次 OpenRouter Key 的 macOS 对话框（保存并切换 / 查看教程 / 取消）
+  - 离线教程 HTML + 「Codex 使用教程」桌面 App
+  - OpenRouter 多模型 catalog + `api` 合集 profile
+  - pick 菜单增加教程入口；失败时引导教程
+- **改动路径**：
+  - `skills/ky-codex-supergrok/**`
+  - `docs/PROGRESS.md`、`VERSION`、根 `README`（若有）
+- **验证**：
+  - bash -n / install 本地安装
+  - codex-provider list / tutorial 路径存在
+- **风险或注意**：
+  - 教程说明走 OpenRouter 而非 DeepSeek 官网直连的原因
+
+---
+
 ## 2026-07-21 08:10 PDT — Grok — ky-codex-supergrok 多模型一键切换
 
 - **操作者**：Grok

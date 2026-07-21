@@ -13,7 +13,7 @@ Kiren Yi（KY）的个人 Agent Skill 集合。
 | [`/ky-sph`](./skills/ky-sph/) | 整理视频号 / 公众号原料入库 |
 | [`/ky-xdraft`](./skills/ky-xdraft/) | 把 Markdown 做成 X 长文草稿流程 |
 | [`/ky-mphtml`](./skills/ky-mphtml/) | Markdown 排成公众号可粘贴 HTML |
-| [`/ky-codex-supergrok`](./skills/ky-codex-supergrok/) | Codex 一键切 SuperGrok / Claude / DeepSeek / Gemini / OpenAI |
+| [`/ky-codex-supergrok`](./skills/ky-codex-supergrok/) | Codex 一键切模型（弹窗填 Key + 图文教程） |
 
 以上能力均为 **KY 自维护的 skill 说明与脚本**（见 `skills/`）。  
 使用前请阅读各 skill 目录下的 `README.md` / `SKILL.md`。

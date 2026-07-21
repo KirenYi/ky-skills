@@ -30,6 +30,12 @@ cp "$SCRIPTS/generate-catalog.py" "$BIN/generate-catalog.py" 2>/dev/null || true
 chmod 700 "$BIN/generate-catalog.py" 2>/dev/null || true
 
 python3 "$SCRIPTS/generate-catalog.py" "$CODEX_HOME/model-catalogs/xai-models.json"
+python3 "$SCRIPTS/generate-openrouter-catalog.py" "$CODEX_HOME/model-catalogs/openrouter-models.json"
+
+# Offline tutorials for "不会使用怎么办"
+mkdir -p "$CODEX_HOME/ky-tutorials"
+cp -R "$SKILL_ROOT/references/tutorials/." "$CODEX_HOME/ky-tutorials/" 2>/dev/null || true
+
 
 # Ensure providers via codex-provider
 "$BIN/codex-provider" list >/dev/null
@@ -116,11 +122,11 @@ echo
 echo "Profiles:"
 KY_CODEX_PROFILES="$CODEX_HOME/ky-profiles.json" "$BIN/codex-provider" list
 echo
-echo "Next:"
-echo "  1) SuperGrok:  grok login && codex-provider use grok"
-echo "  2) Claude/DeepSeek/Gemini:  edit ~/.codex/ky-provider.env  (OPENROUTER_API_KEY=...)"
-echo "     then:  codex-provider use claude | deepseek | gemini"
-echo "  3) macOS:  double-click 「Codex 切换模型」 for a menu"
-echo "  4) Always open a NEW Codex chat after switching"
+echo "Next (simple):"
+echo "  • Double-click 「Codex 切换模型」 — pick a channel"
+echo "  • First Claude/DeepSeek: dialog asks for OpenRouter key + 「查看教程」"
+echo "  • Or open 「Codex 使用教程」 anytime"
+echo "  • SuperGrok: grok login once, then Codex → Grok"
+echo "  • After switch: always NEW chat in Codex"
 echo
 KY_CODEX_PROFILES="$CODEX_HOME/ky-profiles.json" "$BIN/codex-provider" status || true

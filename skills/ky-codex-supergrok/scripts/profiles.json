@@ -1,22 +1,24 @@
 {
-  "version": 2,
+  "version": 3,
   "default": "openai",
   "profiles": {
     "openai": {
-      "label": "OpenAI / ChatGPT Codex",
-      "description": "官方 ChatGPT 登录额度（如 gpt-5.6-sol）",
+      "label": "OpenAI / ChatGPT 官方",
+      "description": "ChatGPT 登录额度（如 gpt-5.6-sol）",
       "model": "gpt-5.6-sol",
       "model_provider": null,
       "model_reasoning_effort": "high",
       "service_tier": "fast",
       "model_catalog_json": null,
       "requires_env": [],
+      "requires_files": [],
       "start_proxy": null,
-      "desktop_app": true
+      "desktop_app": true,
+      "tutorial": "index.html#quick"
     },
     "grok": {
-      "label": "SuperGrok 4.5",
-      "description": "grok login 订阅通道（非 API Key）",
+      "label": "SuperGrok 4.5（订阅）",
+      "description": "grok login，无需 API Key",
       "model": "grok-4.5",
       "model_provider": "xai",
       "model_reasoning_effort": "high",
@@ -25,67 +27,92 @@
       "requires_env": [],
       "requires_files": ["~/.grok/auth.json"],
       "start_proxy": "supergrok",
-      "desktop_app": true
+      "desktop_app": true,
+      "tutorial": "index.html#grok"
+    },
+    "api": {
+      "label": "API 模型合集（OpenRouter）",
+      "description": "Claude/DeepSeek/Gemini 等，配一次 Key，可在模型列表里切换",
+      "model": "deepseek/deepseek-chat",
+      "model_provider": "openrouter",
+      "model_reasoning_effort": "high",
+      "service_tier": null,
+      "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
+      "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_files": [],
+      "start_proxy": null,
+      "desktop_app": true,
+      "tutorial": "index.html#openrouter"
     },
     "claude": {
-      "label": "Claude Sonnet (OpenRouter)",
-      "description": "经 OpenRouter 调用 Claude，需 OPENROUTER_API_KEY",
+      "label": "Claude Sonnet",
+      "description": "OpenRouter → Claude（首次可弹窗填 Key）",
       "model": "anthropic/claude-sonnet-4.6",
       "model_provider": "openrouter",
       "model_reasoning_effort": "high",
       "service_tier": null,
-      "model_catalog_json": null,
+      "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
       "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_files": [],
       "start_proxy": null,
-      "desktop_app": true
+      "desktop_app": true,
+      "tutorial": "index.html#openrouter"
     },
     "claude-opus": {
-      "label": "Claude Opus (OpenRouter)",
-      "description": "经 OpenRouter 调用 Claude Opus",
+      "label": "Claude Opus",
+      "description": "OpenRouter → Claude Opus",
       "model": "anthropic/claude-opus-4.6",
       "model_provider": "openrouter",
       "model_reasoning_effort": "high",
       "service_tier": null,
-      "model_catalog_json": null,
+      "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
       "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_files": [],
       "start_proxy": null,
-      "desktop_app": true
+      "desktop_app": true,
+      "tutorial": "index.html#openrouter"
     },
     "deepseek": {
-      "label": "DeepSeek (OpenRouter)",
-      "description": "经 OpenRouter 调用 DeepSeek（Responses 兼容）",
+      "label": "DeepSeek Chat",
+      "description": "OpenRouter → DeepSeek（首次可弹窗填 Key）",
       "model": "deepseek/deepseek-chat",
       "model_provider": "openrouter",
       "model_reasoning_effort": "medium",
       "service_tier": null,
-      "model_catalog_json": null,
+      "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
       "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_files": [],
       "start_proxy": null,
-      "desktop_app": true
+      "desktop_app": true,
+      "tutorial": "index.html#openrouter"
     },
     "deepseek-r1": {
-      "label": "DeepSeek R1 (OpenRouter)",
-      "description": "经 OpenRouter 调用 DeepSeek 推理模型",
+      "label": "DeepSeek R1",
+      "description": "OpenRouter → DeepSeek R1",
       "model": "deepseek/deepseek-r1",
       "model_provider": "openrouter",
       "model_reasoning_effort": "high",
       "service_tier": null,
-      "model_catalog_json": null,
+      "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
       "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_files": [],
       "start_proxy": null,
-      "desktop_app": true
+      "desktop_app": true,
+      "tutorial": "index.html#openrouter"
     },
     "gemini": {
-      "label": "Gemini (OpenRouter)",
-      "description": "经 OpenRouter 调用 Google Gemini",
+      "label": "Gemini 2.5 Pro",
+      "description": "OpenRouter → Gemini",
       "model": "google/gemini-2.5-pro",
       "model_provider": "openrouter",
       "model_reasoning_effort": "high",
       "service_tier": null,
-      "model_catalog_json": null,
+      "model_catalog_json": "~/.codex/model-catalogs/openrouter-models.json",
       "requires_env": ["OPENROUTER_API_KEY"],
+      "requires_files": [],
       "start_proxy": null,
-      "desktop_app": true
+      "desktop_app": true,
+      "tutorial": "index.html#openrouter"
     }
   },
   "providers": {

@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
-# Multi-profile Codex model switcher (OpenAI / SuperGrok / OpenRouter models).
-# Usage:
-#   codex-provider list
-#   codex-provider status
-#   codex-provider use <profile> [--no-restart]
-#   codex-provider pick              # macOS GUI picker
-#   codex-provider grok|openai|...   # aliases for use
-#   codex-provider toggle            # openai <-> last non-openai (or grok)
+# Multi-profile Codex switcher — simple UX: pick / use / first-run key dialog / tutorials
 set -euo pipefail
 
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
@@ -17,36 +10,46 @@ BACKUP_DIR="$CODEX_HOME/provider-switch-backups"
 BIN="$CODEX_HOME/bin"
 APP_NAME="${CODEX_DESKTOP_APP:-ChatGPT}"
 ENV_FILE="$CODEX_HOME/ky-provider.env"
+LOG="$CODEX_HOME/provider-switch.log"
 
-# Locate profiles.json: installed copy or alongside this script
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROFILES_JSON="${KY_CODEX_PROFILES:-}"
 if [[ -z "$PROFILES_JSON" ]]; then
   for c in \
-    "$SCRIPT_DIR/profiles.json" \
     "$CODEX_HOME/ky-profiles.json" \
+    "$SCRIPT_DIR/profiles.json" \
     "$HOME/.agents/skills/ky-codex-supergrok/scripts/profiles.json" \
     "$HOME/.grok/skills/ky-codex-supergrok/scripts/profiles.json" \
     "$HOME/.codex/skills/ky-codex-supergrok/scripts/profiles.json"
   do
-    if [[ -f "$c" ]]; then PROFILES_JSON="$c"; break; fi
+    [[ -f "$c" ]] && PROFILES_JSON="$c" && break
   done
 fi
-if [[ -z "${PROFILES_JSON:-}" || ! -f "$PROFILES_JSON" ]]; then
-  echo "profiles.json not found. Re-run install.sh" >&2
-  exit 1
-fi
+[[ -f "${PROFILES_JSON:-}" ]] || { echo "profiles.json not found. Re-run install.sh" >&2; exit 1; }
+
+# Resolve tutorials directory
+TUTORIAL_DIR=""
+for d in \
+  "$SCRIPT_DIR/../references/tutorials" \
+  "$HOME/.agents/skills/ky-codex-supergrok/references/tutorials" \
+  "$HOME/.grok/skills/ky-codex-supergrok/references/tutorials" \
+  "$HOME/.codex/skills/ky-codex-supergrok/references/tutorials" \
+  "$CODEX_HOME/ky-tutorials"
+do
+  if [[ -f "$d/index.html" ]]; then TUTORIAL_DIR="$d"; break; fi
+done
 
 mkdir -p "$BACKUP_DIR" "$BIN"
+touch "$LOG"
 
-# Load optional secrets
 if [[ -f "$ENV_FILE" ]]; then
   set -a
   # shellcheck disable=SC1090
-  source "$ENV_FILE"
+  source "$ENV_FILE" || true
   set +a
 fi
 
+log() { echo "$(date '+%F %T') $*" >>"$LOG"; }
 notify() {
   local title="$1" body="$2"
   osascript -e "display notification \"${body//\"/\\\"}\" with title \"${title//\"/\\\"}\"" 2>/dev/null || true
@@ -55,25 +58,19 @@ notify() {
 
 usage() {
   cat <<USAGE
-Usage: codex-provider <command> [args]
+Usage: codex-provider <command>
 
-Commands:
-  list                 List profiles
-  status               Current profile + checks
-  use <id>             Switch to profile (restarts ChatGPT/Codex)
-  pick                 macOS menu to pick a profile
-  toggle               Flip openai <-> previous alt (default grok)
-  keys                 Show which env keys are set (not values)
+  pick                 图形菜单选择模型（macOS，推荐）
+  list                 列出 profile
+  status               当前状态
+  use <id>             切换到指定 profile
+  tutorial [锚点]      打开图文教程（不会使用怎么办）
+  keys                 检查 Key 是否已配置（不显示值）
+  toggle               openai ↔ 上一个非 openai
   help
 
-Shortcuts: openai | grok | claude | claude-opus | deepseek | deepseek-r1 | gemini
-
-Flags:
-  --no-restart         Do not quit/reopen desktop app
-
-Env file (optional): $ENV_FILE
-  OPENROUTER_API_KEY=...
-Profiles: $PROFILES_JSON
+Profiles: openai | grok | api | claude | deepseek | gemini | ...
+First time on Claude/DeepSeek: GUI prompts for OpenRouter API key + tutorial button.
 USAGE
 }
 
@@ -88,11 +85,186 @@ for a in "$@"; do
 done
 set -- "${ARGS[@]:-}"
 
+open_tutorial() {
+  local anchor="${1:-}"
+  local page="index.html"
+  if [[ -n "$anchor" && "$anchor" == *".html"* ]]; then
+    page="$anchor"
+  elif [[ -n "$anchor" ]]; then
+    page="index.html${anchor}"
+  fi
+  if [[ -z "$TUTORIAL_DIR" || ! -f "$TUTORIAL_DIR/index.html" ]]; then
+    # fallback: open online github raw/blob
+    open "https://github.com/KirenYi/ky-skills/blob/main/skills/ky-codex-supergrok/references/tutorials/index.html" 2>/dev/null || true
+    echo "Opened online tutorial (local tutorials not found)"
+    return
+  fi
+  local file="$TUTORIAL_DIR/index.html"
+  if [[ "$page" == index.html#* ]]; then
+    # file URL with fragment
+    open "file://${file}#${page#index.html#}" 2>/dev/null || open "$file"
+  elif [[ "$page" == *#* ]]; then
+    open "file://${TUTORIAL_DIR}/${page}" 2>/dev/null || open "$file"
+  else
+    open "$TUTORIAL_DIR/$page" 2>/dev/null || open "$file"
+  fi
+  echo "Opened tutorial: $page"
+}
+
+gui_alert() {
+  local msg="$1"
+  osascript -e "display alert \"Codex 模型切换\" message \"${msg//\"/\\\"}\" as informational" 2>/dev/null || echo "$msg"
+}
+
+# Returns: filled key on stdout, or empty
+gui_prompt_openrouter_key() {
+  if ! command -v osascript >/dev/null; then
+    return 1
+  fi
+  local result
+  result=$(osascript <<'APPLESCRIPT' 2>/dev/null || true
+set dlg to display dialog "第一次使用 Claude / DeepSeek / Gemini，需要 OpenRouter API Key（一家 Key 多用）。
+
+1. 点「查看教程」按步骤申请
+2. 或直接粘贴 sk-or-v1-... 后点「保存并切换」
+
+（Key 只保存在本机 ~/.codex/ky-provider.env）" buttons {"取消", "查看教程", "保存并切换"} default button "保存并切换" with title "配置 API Key" default answer ""
+set btn to button returned of dlg
+set ans to text returned of dlg
+return btn & "	" & ans
+APPLESCRIPT
+)
+  echo "$result"
+}
+
+save_openrouter_key() {
+  local key="$1"
+  key=$(echo "$key" | tr -d '[:space:]')
+  if [[ -z "$key" ]]; then
+    return 1
+  fi
+  if [[ ! "$key" =~ ^sk-or- ]]; then
+    # still allow other formats but warn
+    log "key does not start with sk-or- (saving anyway)"
+  fi
+  umask 077
+  if [[ -f "$ENV_FILE" ]]; then
+    # replace or append
+    if grep -q '^OPENROUTER_API_KEY=' "$ENV_FILE" 2>/dev/null; then
+      # portable sed
+      python3 - "$ENV_FILE" "$key" <<'PY'
+from pathlib import Path
+import sys
+path, key = Path(sys.argv[1]), sys.argv[2]
+lines = path.read_text().splitlines()
+out, found = [], False
+for line in lines:
+    if line.startswith("OPENROUTER_API_KEY="):
+        out.append(f"OPENROUTER_API_KEY={key}")
+        found = True
+    else:
+        out.append(line)
+if not found:
+    out.append(f"OPENROUTER_API_KEY={key}")
+path.write_text("\n".join(out) + "\n")
+path.chmod(0o600)
+PY
+    else
+      printf '\nOPENROUTER_API_KEY=%s\n' "$key" >>"$ENV_FILE"
+      chmod 600 "$ENV_FILE"
+    fi
+  else
+    printf '# ky-codex-supergrok secrets — do not commit\nOPENROUTER_API_KEY=%s\n' "$key" >"$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+  fi
+  export OPENROUTER_API_KEY="$key"
+  log "saved OPENROUTER_API_KEY to $ENV_FILE"
+  return 0
+}
+
+ensure_openrouter_key_interactive() {
+  # if already set, ok
+  if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+    return 0
+  fi
+  # reload env file
+  if [[ -f "$ENV_FILE" ]]; then
+    set -a; source "$ENV_FILE" || true; set +a
+  fi
+  if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then
+    return 0
+  fi
+
+  if ! command -v osascript >/dev/null; then
+    echo "缺少 OPENROUTER_API_KEY。请编辑 $ENV_FILE 或运行: codex-provider tutorial" >&2
+    return 1
+  fi
+
+  while true; do
+    local raw btn key
+    raw=$(gui_prompt_openrouter_key || true)
+    btn="${raw%%	*}"
+    key="${raw#*	}"
+    case "$btn" in
+      取消|"")
+        echo "已取消"
+        return 1
+        ;;
+      查看教程)
+        open_tutorial "index.html#openrouter"
+        # loop again after tutorial
+        continue
+        ;;
+      保存并切换)
+        if save_openrouter_key "$key"; then
+          notify "API Key 已保存" "已写入本机 ky-provider.env"
+          return 0
+        fi
+        gui_alert "Key 不能为空。请粘贴 OpenRouter 的 sk-or-v1-... 密钥。
+点「查看教程」可打开图文步骤。"
+        continue
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+  done
+}
+
+ensure_grok_login_interactive() {
+  if [[ -f "$HOME/.grok/auth.json" ]]; then
+    return 0
+  fi
+  if ! command -v osascript >/dev/null; then
+    echo "请先运行: grok login" >&2
+    return 1
+  fi
+  local btn
+  btn=$(osascript <<'APPLESCRIPT' 2>/dev/null || true
+set btn to button returned of (display alert "尚未登录 SuperGrok" message "需要先在终端执行：
+
+  grok login
+
+完成订阅登录后再切换到 SuperGrok。" buttons {"取消", "查看教程", "我已登录，重试"} default button "查看教程" as warning)
+return btn
+APPLESCRIPT
+)
+  case "$btn" in
+    查看教程) open_tutorial "index.html#grok"; return 1 ;;
+    我已登录，重试)
+      [[ -f "$HOME/.grok/auth.json" ]] && return 0
+      gui_alert "仍未找到 ~/.grok/auth.json。请确认已安装 Grok CLI 并执行 grok login。"
+      return 1
+      ;;
+    *) return 1 ;;
+  esac
+}
+
 cmd_list() {
   python3 - "$PROFILES_JSON" <<'PY'
-import json,sys
+import json
 from pathlib import Path
-d=json.loads(Path(sys.argv[1]).read_text())
+d=json.loads(Path(__import__('sys').argv[1]).read_text())
 for pid,p in d["profiles"].items():
     print(f"{pid:14}  {p.get('label','')}")
     if p.get("description"):
@@ -105,59 +277,50 @@ cmd_status() {
   mode=$(cat "$STATE" 2>/dev/null || echo "(unknown)")
   echo "mode: $mode"
   echo "profiles: $PROFILES_JSON"
+  echo "tutorials: ${TUTORIAL_DIR:-missing}"
   echo "env file: $ENV_FILE ($( [[ -f $ENV_FILE ]] && echo present || echo missing ))"
   if [[ -x "$BIN/supergrok-proxy" ]]; then
     echo -n "supergrok proxy: "; "$BIN/supergrok-proxy" status || true
   fi
-  echo "env keys:"
-  for k in OPENROUTER_API_KEY DEEPSEEK_API_KEY ANTHROPIC_API_KEY; do
-    if [[ -n "${!k:-}" ]]; then echo "  $k=set"; else echo "  $k=missing"; fi
-  done
+  echo -n "OPENROUTER_API_KEY: "
+  if [[ -n "${OPENROUTER_API_KEY:-}" ]]; then echo "set"; else echo "missing"; fi
   if grep -q 'codex-provider-switcher:begin' "$CONFIG" 2>/dev/null; then
     echo "--- managed block ---"
     sed -n '/codex-provider-switcher:begin/,/codex-provider-switcher:end/p' "$CONFIG"
   fi
-  echo "root model lines:"
-  grep -nE '^(model|model_provider|model_catalog_json|model_reasoning_effort|service_tier)[[:space:]]*=' "$CONFIG" 2>/dev/null | head -20 || true
 }
 
 backup_config() {
   local ts; ts=$(date +%Y%m%d-%H%M%S)
-  [[ -f "$CONFIG" ]] && cp "$CONFIG" "$BACKUP_DIR/config.toml.$ts"
-  ls -1t "$BACKUP_DIR"/config.toml.* 2>/dev/null | tail -n +15 | xargs -I{} rm -f {} 2>/dev/null || true
+  [[ -f "$CONFIG" ]] && cp "$CONFIG" "$BACKUP_DIR/config.toml.$ts" || true
+  ls -1t "$BACKUP_DIR"/config.toml.* 2>/dev/null | tail -n +20 | xargs -I{} rm -f {} 2>/dev/null || true
 }
 
 ensure_providers() {
   python3 - "$CONFIG" "$PROFILES_JSON" <<'PY'
-import json, re, sys
+import json, sys
 from pathlib import Path
 cfg_path = Path(sys.argv[1])
 prof = json.loads(Path(sys.argv[2]).read_text())
 text = cfg_path.read_text() if cfg_path.exists() else ""
-providers = prof.get("providers") or {}
-changed = False
-for pid, p in providers.items():
+for pid, p in (prof.get("providers") or {}).items():
     marker = f"[model_providers.{pid}]"
     if marker in text:
         continue
-    block = [f"\n# --- ky-codex-supergrok provider: {pid} ---", marker, f'name = "{p["name"]}"', f'base_url = "{p["base_url"]}"', f'wire_api = "{p.get("wire_api","responses")}"']
+    block = [f"\n# --- ky-codex-supergrok provider: {pid} ---", marker,
+             f'name = "{p["name"]}"', f'base_url = "{p["base_url"]}"',
+             f'wire_api = "{p.get("wire_api","responses")}"']
     if p.get("env_key"):
         block.append(f'env_key = "{p["env_key"]}"')
     if p.get("supports_websockets") is False:
         block.append("supports_websockets = false")
-    block.append("request_max_retries = 4")
-    block.append("stream_idle_timeout_ms = 600000")
+    block += ["request_max_retries = 4", "stream_idle_timeout_ms = 600000"]
     headers = p.get("http_headers") or {}
     if headers:
         block.append("http_headers = { " + ", ".join(f'"{k}" = "{v}"' for k,v in headers.items()) + " }")
     text = text.rstrip() + "\n" + "\n".join(block) + "\n"
-    changed = True
-if changed or not cfg_path.exists():
-    cfg_path.parent.mkdir(parents=True, exist_ok=True)
-    cfg_path.write_text(text if text.endswith("\n") else text+"\n")
-    print("providers ensured")
-else:
-    print("providers already present")
+cfg_path.parent.mkdir(parents=True, exist_ok=True)
+cfg_path.write_text(text if text.endswith("\n") else text + "\n")
 PY
 }
 
@@ -166,154 +329,112 @@ apply_profile() {
   python3 - "$CONFIG" "$PROFILES_JSON" "$pid" <<'PY'
 import json, re, sys
 from pathlib import Path
-
 cfg_path = Path(sys.argv[1])
 data = json.loads(Path(sys.argv[2]).read_text())
 pid = sys.argv[3]
-if pid not in data["profiles"]:
-    print(f"unknown profile: {pid}", file=sys.stderr)
-    sys.exit(2)
 p = data["profiles"][pid]
 text = cfg_path.read_text() if cfg_path.exists() else ""
-
-managed_keys = {
-    "model", "model_provider", "model_catalog_json",
-    "model_reasoning_effort", "service_tier",
-}
-
+managed = {"model","model_provider","model_catalog_json","model_reasoning_effort","service_tier"}
 lines = text.splitlines(keepends=True)
-out = []
-in_table = False
-skip = False
+out, in_table, skip = [], False, False
 for line in lines:
-    stripped = line.strip()
-    if stripped == "# --- codex-provider-switcher:begin ---":
-        skip = True
-        continue
+    s = line.strip()
+    if s == "# --- codex-provider-switcher:begin ---":
+        skip = True; continue
     if skip:
-        if stripped == "# --- codex-provider-switcher:end ---":
+        if s == "# --- codex-provider-switcher:end ---":
             skip = False
         continue
-    if stripped.startswith("["):
+    if s.startswith("["):
         in_table = True
-        out.append(line)
-        continue
-    if not in_table and stripped and not stripped.startswith("#"):
-        m = re.match(r"^([A-Za-z0-9_\.\-]+)\s*=", stripped)
-        if m and m.group(1) in managed_keys:
+        out.append(line); continue
+    if not in_table and s and not s.startswith("#"):
+        m = re.match(r"^([A-Za-z0-9_\.\-]+)\s*=", s)
+        if m and m.group(1) in managed:
             continue
     out.append(line)
-
 body = "".join(out).lstrip("\n")
-label = p.get("label", pid)
-lines_b = [
+b = [
     "# --- codex-provider-switcher:begin ---",
-    f"# Active profile: {pid} — {label}",
-    f'# Switch: codex-provider use <id> | pick | list',
+    f"# Active profile: {pid} — {p.get('label', pid)}",
+    "# Switch: codex-provider pick | use <id> | tutorial",
     f'model = "{p["model"]}"',
 ]
 if p.get("model_provider"):
-    lines_b.append(f'model_provider = "{p["model_provider"]}"')
+    b.append(f'model_provider = "{p["model_provider"]}"')
 if p.get("model_catalog_json"):
-    lines_b.append(f'model_catalog_json = "{p["model_catalog_json"]}"')
+    b.append(f'model_catalog_json = "{p["model_catalog_json"]}"')
 if p.get("model_reasoning_effort"):
-    lines_b.append(f'model_reasoning_effort = "{p["model_reasoning_effort"]}"')
+    b.append(f'model_reasoning_effort = "{p["model_reasoning_effort"]}"')
 if p.get("service_tier"):
-    lines_b.append(f'service_tier = "{p["service_tier"]}"')
-lines_b.append("# --- codex-provider-switcher:end ---")
-block = "\n".join(lines_b) + "\n\n"
-cfg_path.parent.mkdir(parents=True, exist_ok=True)
-cfg_path.write_text(block + body)
+    b.append(f'service_tier = "{p["service_tier"]}"')
+b.append("# --- codex-provider-switcher:end ---")
+cfg_path.write_text("\n".join(b) + "\n\n" + body)
 print(f"config set to profile={pid} model={p['model']}")
 PY
   echo "$pid" > "$STATE"
-  if [[ "$pid" != "openai" ]]; then
-    echo "$pid" > "$LAST_ALT"
-  fi
-}
-
-check_requirements() {
-  local pid="$1"
-  python3 - "$PROFILES_JSON" "$pid" <<'PY'
-import json, os, sys
-from pathlib import Path
-data=json.loads(Path(sys.argv[1]).read_text())
-p=data["profiles"][sys.argv[2]]
-errs=[]
-for e in p.get("requires_env") or []:
-    if not os.environ.get(e):
-        errs.append(f"missing env {e} (set in shell or ~/.codex/ky-provider.env)")
-for f in p.get("requires_files") or []:
-    path=Path(f).expanduser()
-    if not path.exists():
-        errs.append(f"missing file {path}")
-if errs:
-    print("REQUIREMENTS_FAILED")
-    for e in errs:
-        print(e)
-    sys.exit(3)
-print("ok")
-PY
+  [[ "$pid" != "openai" ]] && echo "$pid" > "$LAST_ALT" || true
 }
 
 start_proxy_if_needed() {
   local pid="$1"
   local need
-  need=$(python3 -c "import json;from pathlib import Path;p=json.loads(Path('$PROFILES_JSON').read_text())['profiles']['$pid'];print(p.get('start_proxy') or '')")
-  if [[ "$need" == "supergrok" ]]; then
-    if [[ -x "$BIN/supergrok-proxy" ]]; then
-      env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u all_proxy \
-        "$BIN/supergrok-proxy" start >/dev/null 2>&1 \
-        || env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u all_proxy \
-             "$BIN/supergrok-proxy" restart >/dev/null 2>&1 || true
-    fi
+  need=$(python3 -c "import json;from pathlib import Path;print(json.loads(Path(r'''$PROFILES_JSON''').read_text())['profiles']['$pid'].get('start_proxy') or '')")
+  if [[ "$need" == "supergrok" && -x "$BIN/supergrok-proxy" ]]; then
+    env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u all_proxy \
+      "$BIN/supergrok-proxy" start >/dev/null 2>&1 \
+      || env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u all_proxy \
+           "$BIN/supergrok-proxy" restart >/dev/null 2>&1 || true
   fi
 }
 
 restart_desktop() {
   if [[ "$NO_RESTART" == "1" ]]; then
-    echo "skip restart (--no-restart)"
-    return
+    echo "skip restart (--no-restart)"; return
   fi
   if pgrep -x "ChatGPT" >/dev/null 2>&1; then
     osascript -e "tell application \"$APP_NAME\" to quit" 2>/dev/null || true
-    for _ in $(seq 1 16); do
-      pgrep -x "ChatGPT" >/dev/null 2>&1 || break
-      sleep 0.5
-    done
-    pkill -x "ChatGPT" 2>/dev/null || true
+    for _ in $(seq 1 16); do pgrep -x ChatGPT >/dev/null 2>&1 || break; sleep 0.5; done
+    pkill -x ChatGPT 2>/dev/null || true
     sleep 0.5
   fi
-  open -a "$APP_NAME" 2>/dev/null || open -a "ChatGPT" 2>/dev/null || true
+  open -a "$APP_NAME" 2>/dev/null || open -a ChatGPT 2>/dev/null || true
+}
+
+profile_requires_openrouter() {
+  python3 -c "import json;from pathlib import Path;p=json.loads(Path(r'''$PROFILES_JSON''').read_text())['profiles']['$1'];print('yes' if 'OPENROUTER_API_KEY' in (p.get('requires_env') or []) else 'no')"
 }
 
 cmd_use() {
   local pid="$1"
-  ensure_providers
-  if ! check_requirements "$pid"; then
-    echo "Cannot switch to '$pid' — fix requirements above." >&2
-    if [[ "$pid" == "claude" || "$pid" == "claude-opus" || "$pid" == "deepseek" || "$pid" == "deepseek-r1" || "$pid" == "gemini" ]]; then
-      echo "Create $ENV_FILE with:" >&2
-      echo "  OPENROUTER_API_KEY=sk-or-v1-..." >&2
-      echo "Get a key: https://openrouter.ai/keys" >&2
-    fi
-    if [[ "$pid" == "grok" ]]; then
-      echo "Run: grok login" >&2
-    fi
-    exit 3
+  if ! python3 -c "import json,sys;from pathlib import Path;sys.exit(0 if '$pid' in json.loads(Path(r'''$PROFILES_JSON''').read_text())['profiles'] else 1)"; then
+    echo "unknown profile: $pid" >&2
+    cmd_list
+    exit 2
   fi
+
+  # interactive requirements
+  if [[ "$(profile_requires_openrouter "$pid")" == "yes" ]]; then
+    ensure_openrouter_key_interactive || exit 3
+  fi
+  if [[ "$pid" == "grok" ]]; then
+    ensure_grok_login_interactive || exit 3
+  fi
+
+  ensure_providers
   backup_config
   start_proxy_if_needed "$pid"
   apply_profile "$pid"
   local label
-  label=$(python3 -c "import json;from pathlib import Path;print(json.loads(Path('$PROFILES_JSON').read_text())['profiles']['$pid']['label'])")
+  label=$(python3 -c "import json;from pathlib import Path;print(json.loads(Path(r'''$PROFILES_JSON''').read_text())['profiles']['$pid']['label'])")
   restart_desktop
-  notify "Codex → $label" "已切换。请新建对话使用（勿沿用旧会话）。"
+  notify "Codex → $label" "已切换。请新建对话。不会用可点「Codex 使用教程」。"
+  log "switched to $pid"
 }
 
 cmd_pick() {
   if ! command -v osascript >/dev/null; then
-    echo "pick requires macOS osascript; use: codex-provider list && codex-provider use <id>" >&2
+    echo "use: codex-provider list && codex-provider use <id>" >&2
     exit 1
   fi
   local tmp choice pid
@@ -323,34 +444,44 @@ import json, sys
 from pathlib import Path
 data = json.loads(Path(sys.argv[1]).read_text())
 out = Path(sys.argv[2])
-escaped = []
+# prepend tutorial entry
+labels = ["📖 不会使用？打开教程"]
+ids = ["__tutorial__"]
 for pid, p in data["profiles"].items():
-    l = (p.get("label") or pid).replace("\\", "\\\\").replace("\"", "\\\"")
-    escaped.append("\"" + l + "\"")
+    labels.append(p.get("label") or pid)
+    ids.append(pid)
+Path(sys.argv[2] + ".ids").write_text("\n".join(ids))
+escaped = []
+for l in labels:
+    escaped.append("\"" + l.replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
 items = ", ".join(escaped)
 out.write_text(
     "set opts to {" + items + "}\n"
-    "set chosen to choose from list opts with prompt \\"选择 Codex 模型 / 通道：\\" default items {item 1 of opts}\n"
-    "if chosen is false then\n  return \\"\\"\nelse\n  return item 1 of chosen\nend if\n"
+    "set chosen to choose from list opts with prompt \"选择 Codex 通道 / 模型：\\n（首次 Claude·DeepSeek 会引导填写 API）\" default items {item 1 of opts}\n"
+    "if chosen is false then\n  return \"\"\nelse\n  return item 1 of chosen\nend if\n"
 )
-' "$PROFILES_JSON" "$tmp.applescript"
-  choice=$(osascript "$tmp.applescript" 2>/dev/null || true)
-  rm -f "$tmp" "$tmp.applescript"
+' "$PROFILES_JSON" "$tmp"
+  choice=$(osascript "$tmp" 2>/dev/null || true)
   if [[ -z "${choice:-}" ]]; then
-    echo "cancelled"
+    rm -f "$tmp" "$tmp.ids"
+    echo "cancelled"; exit 0
+  fi
+  if [[ "$choice" == "📖 不会使用？打开教程" ]]; then
+    rm -f "$tmp" "$tmp.ids"
+    open_tutorial
     exit 0
   fi
   pid=$(python3 -c '
-import json, sys
+import json,sys
 from pathlib import Path
-data = json.loads(Path(sys.argv[1]).read_text())
-label = sys.argv[2]
-for pid, p in data["profiles"].items():
-    if p.get("label") == label:
-        print(pid)
-        raise SystemExit(0)
+data=json.loads(Path(sys.argv[1]).read_text())
+label=sys.argv[2]
+for pid,p in data["profiles"].items():
+    if p.get("label")==label:
+        print(pid); raise SystemExit
 raise SystemExit(2)
 ' "$PROFILES_JSON" "$choice")
+  rm -f "$tmp" "$tmp.ids"
   cmd_use "$pid"
 }
 
@@ -365,37 +496,30 @@ cmd_toggle() {
   fi
 }
 
-cmd_keys() {
-  echo "Checking presence only (values not shown):"
-  for k in OPENROUTER_API_KEY DEEPSEEK_API_KEY ANTHROPIC_API_KEY XAI_API_KEY; do
-    if [[ -n "${!k:-}" ]]; then echo "  $k: set"; else echo "  $k: missing"; fi
-  done
-  if [[ -f "$ENV_FILE" ]]; then echo "env file: $ENV_FILE"; else echo "env file missing: $ENV_FILE"; fi
-}
-
 cmd="${1:-status}"
 case "$cmd" in
   list|ls) cmd_list ;;
   status|st) cmd_status ;;
-  use|switch)
+  tutorial|help-ui|guide)
     shift || true
-    [[ -n "${1:-}" ]] || { usage; exit 2; }
-    cmd_use "$1"
+    open_tutorial "${1:-}"
     ;;
+  use|switch) shift; [[ -n "${1:-}" ]] || { usage; exit 2; }; cmd_use "$1" ;;
   pick|menu|ui) cmd_pick ;;
   toggle) cmd_toggle ;;
-  keys) cmd_keys ;;
+  keys)
+    echo -n "OPENROUTER_API_KEY: "; [[ -n "${OPENROUTER_API_KEY:-}" ]] && echo set || echo missing
+    echo "env file: $ENV_FILE"
+    ;;
   help) usage ;;
-  openai|grok|claude|claude-opus|deepseek|deepseek-r1|gemini)
+  openai|grok|api|claude|claude-opus|deepseek|deepseek-r1|gemini)
     cmd_use "$cmd"
     ;;
   *)
-    # treat unknown as profile id attempt
-    if python3 -c "import json;from pathlib import Path;d=json.loads(Path('$PROFILES_JSON').read_text());import sys;sys.exit(0 if '$cmd' in d['profiles'] else 1)"; then
+    if python3 -c "import json,sys;from pathlib import Path;sys.exit(0 if sys.argv[1] in json.loads(Path(sys.argv[2]).read_text())['profiles'] else 1)" "$cmd" "$PROFILES_JSON"; then
       cmd_use "$cmd"
     else
-      usage
-      exit 2
+      usage; exit 2
     fi
     ;;
 esac
