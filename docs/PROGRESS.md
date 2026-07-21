@@ -24,6 +24,14 @@
 
 ---
 
+## 2026-07-21 — Grok — 修复 OpenRouter Desktop 401 Missing Authentication
+
+- **原因**：Codex Desktop 读不到 ky-provider.env，请求无 Authorization
+- **修复**：sync-openrouter-bearer.py 把 Key 写入 experimental_bearer_token；切换时自动同步
+- **验证**：本机 config 已含 bearer；用户需重启 Codex 并确认 Key 为 sk-or-v1- 格式
+
+---
+
 ## 2026-07-21 — Grok — 桌面按需生成快捷方式
 
 - **操作者**：Grok

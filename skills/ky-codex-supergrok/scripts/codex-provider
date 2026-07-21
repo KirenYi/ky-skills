@@ -179,7 +179,20 @@ PY
   fi
   export OPENROUTER_API_KEY="$key"
   log "saved OPENROUTER_API_KEY to $ENV_FILE"
+  sync_openrouter_bearer_to_config
+  launchctl setenv OPENROUTER_API_KEY "$key" 2>/dev/null || true
   return 0
+}
+
+
+sync_openrouter_bearer_to_config() {
+  local py
+  for py in "$BIN/sync-openrouter-bearer.py" "$SCRIPT_DIR/sync-openrouter-bearer.py"; do
+    if [[ -f "$py" ]]; then
+      python3 "$py" "$CONFIG" "$ENV_FILE" || true
+      return 0
+    fi
+  done
 }
 
 ensure_openrouter_key_interactive() {
@@ -416,6 +429,7 @@ cmd_use() {
   # interactive requirements
   if [[ "$(profile_requires_openrouter "$pid")" == "yes" ]]; then
     ensure_openrouter_key_interactive || exit 3
+    sync_openrouter_bearer_to_config
   fi
   if [[ "$pid" == "grok" ]]; then
     ensure_grok_login_interactive || exit 3
