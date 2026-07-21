@@ -24,6 +24,17 @@
 
 ---
 
+## 2026-07-21 — Grok — 清理桌面切换器图标
+
+- **操作者**：Grok
+- **目标**：桌面只保留最新 5 个入口
+- **已完成**：删除 Claude/DeepSeek/Gemini 等多余 App 与旧 .command；make-desktop-apps 同步
+- **改动路径**：本机 Desktop/Applications；skills/ky-codex-supergrok/scripts/make-desktop-apps.sh
+- **验证**：ls Desktop Codex*
+- **下一步**：无
+
+---
+
 ## 2026-07-21 09:00 PDT — Grok — 多模型切换 UX：弹窗填 Key + 图文教程
 
 - **操作者**：Grok

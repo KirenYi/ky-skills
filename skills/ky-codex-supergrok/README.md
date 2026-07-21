@@ -16,12 +16,15 @@ bash skills/ky-codex-supergrok/scripts/install.sh
 
 双击桌面 **「Codex 切换模型」** → 点要的通道。
 
-| 选项 | 是什么 |
+桌面**只保留 5 个入口**（装/升级时会自动清掉旧的 Claude/DeepSeek 等多余图标）：
+
+| 图标 | 是什么 |
 |------|--------|
-| OpenAI / ChatGPT 官方 | 原来的官方额度 |
-| SuperGrok | 订阅登录，不用买 API |
-| API 模型合集 | Claude / DeepSeek / Gemini 等（一个 OpenRouter Key） |
-| Claude / DeepSeek / Gemini | 直达对应默认模型 |
+| **Codex 切换模型** | 主菜单：任选通道 +「不会使用？打开教程」 |
+| **Codex 使用教程** | 图文教程 |
+| **Codex → OpenAI** | ChatGPT 官方额度 |
+| **Codex → Grok** | SuperGrok 订阅 |
+| **Codex → API合集** | Claude / DeepSeek / Gemini（一个 OpenRouter Key；进列表可再细切） |
 
 ### 3. 第一次用 DeepSeek / Claude？
 

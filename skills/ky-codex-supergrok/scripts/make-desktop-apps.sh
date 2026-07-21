@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Create only the essential macOS switcher apps (keep desktop clean).
 set -euo pipefail
 BIN="${CODEX_BIN_DIR:-$HOME/.codex/bin}"
 DESTS=("$HOME/Desktop" "$HOME/Applications")
@@ -17,7 +18,7 @@ make_app() {
   <key>CFBundleIdentifier</key><string>local.ky.codex.provider.${mode}</string>
   <key>CFBundleName</key><string>${name}</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>3.0</string>
+  <key>CFBundleShortVersionString</key><string>3.1</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
@@ -32,14 +33,25 @@ LAUNCH
   echo "created $app"
 }
 
+# Remove legacy per-model shortcuts if present (Claude/DeepSeek/Gemini/.command)
+cleanup_legacy() {
+  local dest="$1"
+  rm -rf \
+    "$dest/Codex → Claude.app" \
+    "$dest/Codex → DeepSeek.app" \
+    "$dest/Codex → Gemini.app" \
+    "$dest/Codex → claude.app" \
+    2>/dev/null || true
+  rm -f "$dest"/Codex*.command "$dest"/Codex→*.command 2>/dev/null || true
+}
+
 for dest in "${DESTS[@]}"; do
   mkdir -p "$dest"
+  cleanup_legacy "$dest"
+  # Only 5 apps — keep the desktop simple
   make_app "Codex 切换模型" "pick" "$dest"
   make_app "Codex 使用教程" "tutorial" "$dest"
   make_app "Codex → OpenAI" "openai" "$dest"
   make_app "Codex → Grok" "grok" "$dest"
   make_app "Codex → API合集" "api" "$dest"
-  make_app "Codex → Claude" "claude" "$dest"
-  make_app "Codex → DeepSeek" "deepseek" "$dest"
-  make_app "Codex → Gemini" "gemini" "$dest"
 done

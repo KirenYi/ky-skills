@@ -1,5 +1,9 @@
 # ky-codex-supergrok changelog
 
+## 0.3.1 — 2026-07-21
+
+- 桌面仅保留 5 个入口；安装时清理旧的 per-model 快捷方式与 `.command`
+
 ## 0.3.0 — 2026-07-21
 
 - **首次缺 Key 弹窗**：粘贴 OpenRouter Key / 查看教程 / 取消
