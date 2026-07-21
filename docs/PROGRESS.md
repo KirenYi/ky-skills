@@ -24,6 +24,26 @@
 
 ---
 
+## 2026-07-21 — Grok — 精简 skill 命名与核心描述
+
+- **操作者**：Grok
+- **目标**：命名尽量短，description 只保留核心能力
+- **已完成**：
+  - 重命名：`ky-douyin`→`ky-dy`，`ky-wx-channels`→`ky-sph`，`ky-x-article`→`ky-xdraft`，`ky-wechat-html`→`ky-mphtml`
+  - 统一 description 为一行核心能力 + 短触发
+  - 更新 README / install / AGENTS / THIRD_PARTY / 字体文档引用
+- **改动路径**：
+  - `skills/ky-dy|ky-xhs|ky-sph|ky-xdraft|ky-mphtml|ky-x/**`
+  - `README.md` `VERSION` `AGENTS.md` `install.sh` `docs/**`
+- **验证**：
+  - 目录名与 SKILL frontmatter `name` 一致
+- **未完成 / 下一步**：
+  - push；本机重链 soft link
+- **风险或注意**：
+  - 旧命令名失效，需重启 Agent
+
+---
+
 ## 2026-07-20 — Grok — 新增媒体抓取与 X 草稿四 skill 并准备推送
 
 - **操作者**：Grok

@@ -13,7 +13,8 @@
 
 `ky-skills` 是 **Kiren Yi 的个人 Agent Skill 集合**，不是单一脚本仓库。
 
-- 当前（v0.4）已发布：`ky-x`、`ky-wechat-html`、`ky-douyin`、`ky-xhs`、`ky-wx-channels`、`ky-x-article`
+- 当前（v0.4.1）已发布：`ky-x`、`ky-dy`、`ky-xhs`、`ky-sph`、`ky-xdraft`、`ky-mphtml`  
+- 命名原则：**短命令 + description 只写核心能力**
 - 之后会有更多 `ky-*` skill，全部放在 `skills/` 下
 - 用户装一次集合后，应能在 **多个终端 / 多个 Agent 产品** 里用同一套 skill
 

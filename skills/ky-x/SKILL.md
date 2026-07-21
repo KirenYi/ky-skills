@@ -1,15 +1,13 @@
 ---
 name: ky-x
 description: |
-  把 X（Twitter）账号的公开帖子增量归档到本地（JSONL + Markdown）。
-  默认无需 X API。用户给出博主 handle 即可同步。
-  触发方式：/ky-x、「ky-x」「抓推文」「归档推文」「同步 X 博主」「拉 @xxx 的帖」
-  Archive public X posts by handle to local Markdown/JSONL.
+  归档 X 公开帖到本地（Markdown + JSONL）。
+  触发：/ky-x、「抓推文」「同步 X」
 ---
 
-# ky-x
+# ky-x · 归档 X
 
-本 skill 专门负责：**输入账号 ID（handle）→ 增量拉取公开帖 → 存成本地可读文件**。
+**核心：handle → 本地帖子库。**
 
 ---
 

@@ -1,4 +1,4 @@
-# ky-wechat-html 样式库（真源）
+﻿# ky-mphtml 样式库（真源）
 
 > **字体**：须遵守仓库 `docs/FONT_LICENSE.md`。仅使用可商用公开字体或系统回退栈；禁止未授权商用字库。
 

@@ -1,13 +1,12 @@
 ---
-name: ky-wechat-html
+name: ky-mphtml
 description: |
-  把 Markdown 转成可粘贴到微信公众号后台的 HTML。
-  内置多套排版风格；只做发布排版，不改写观点、不润色文案。
-  触发方式：/ky-wechat-html、/ky-公众号、「公众号 HTML」「微信排版」「生成公众号版」
-  Convert Markdown to WeChat Official Account paste-ready HTML with built-in layout styles.
+  Markdown 转公众号可粘贴 HTML（只排版）。
+  触发：/ky-mphtml、「公众号 HTML」「微信排版」
 ---
 
-# ky-wechat-html
+
+# ky-mphtml · 公众号 HTML
 
 你是微信公众号 HTML 排版工具。
 
@@ -237,5 +236,5 @@ description: |
 
 ## 安装信息
 
-- 本 skill：`/ky-wechat-html`  
-- 真源：本目录；多端安装用仓库根 `./scripts/install-links.sh ky-wechat-html`
+- 本 skill：`/ky-mphtml`  
+- 真源：本目录；多端安装用仓库根 `./scripts/install-links.sh ky-mphtml`

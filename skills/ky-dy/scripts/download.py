@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ky-douyin: download a public Douyin video via Playwright network intercept.
+"""ky-dy: download a public Douyin video via Playwright network intercept.
 
 MIT License — Kiren Yi (KY) / ky-skills
 Technique: headless Chromium intercepts aweme/detail JSON for play URLs.
@@ -138,7 +138,7 @@ def metadata_blob(info: dict[str, Any], source_url: str) -> dict[str, Any]:
         "create_time": aweme.get("create_time"),
         "duration_ms": video.get("duration"),
         "statistics": aweme.get("statistics") or {},
-        "tool": "ky-douyin",
+        "tool": "ky-dy",
     }
 
 
@@ -163,14 +163,14 @@ def download_file(play_url: str, dest: Path) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="ky-douyin 视频下载")
+    parser = argparse.ArgumentParser(description="ky-dy 视频下载")
     parser.add_argument("url", help="抖音视频链接")
     parser.add_argument("output", nargs="?", help="输出 mp4 路径")
     parser.add_argument("--metadata-only", action="store_true")
     parser.add_argument("--timeout", type=int, default=60)
     args = parser.parse_args()
 
-    print("ky-douyin")
+    print("ky-dy")
     try:
         info = fetch_aweme(args.url, timeout=args.timeout)
     except Exception as exc:
