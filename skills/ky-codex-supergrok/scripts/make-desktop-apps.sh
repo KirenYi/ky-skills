@@ -1,14 +1,27 @@
 #!/usr/bin/env bash
-# Only install the hub apps. Per-channel desktop shortcuts are created on first use.
+# Only the main hub app. Tutorial is inside the menu. Channel shortcuts on first use.
 set -euo pipefail
 BIN="${CODEX_BIN_DIR:-$HOME/.codex/bin}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ICON_SRC="$SCRIPT_DIR/assets/CodexSwitch.icns"
+ICON_DST="${CODEX_HOME:-$HOME/.codex}/bin/CodexSwitch.icns"
 DESTS=("$HOME/Desktop" "$HOME/Applications")
+
+if [[ -f "$ICON_SRC" ]]; then
+  mkdir -p "$(dirname "$ICON_DST")"
+  cp "$ICON_SRC" "$ICON_DST"
+fi
 
 make_app() {
   local name="$1" mode="$2" dest_root="$3"
   local app="$dest_root/${name}.app"
   rm -rf "$app"
-  mkdir -p "$app/Contents/MacOS"
+  mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+  if [[ -f "$ICON_DST" ]]; then
+    cp "$ICON_DST" "$app/Contents/Resources/AppIcon.icns"
+  elif [[ -f "$ICON_SRC" ]]; then
+    cp "$ICON_SRC" "$app/Contents/Resources/AppIcon.icns"
+  fi
   cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -17,9 +30,11 @@ make_app() {
   <key>CFBundleExecutable</key><string>launcher</string>
   <key>CFBundleIdentifier</key><string>local.ky.codex.provider.${mode}</string>
   <key>CFBundleName</key><string>${name}</string>
+  <key>CFBundleDisplayName</key><string>${name}</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>4.0</string>
-  <key>LSUIElement</key><true/>
+  <key>CFBundleShortVersionString</key><string>5.0</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>LSUIElement</key><false/>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>
@@ -30,36 +45,25 @@ exec "$BIN/codex-provider-app-run" "${mode}"
 LAUNCH
   chmod 755 "$app/Contents/MacOS/launcher"
   xattr -cr "$app" 2>/dev/null || true
+  # touch to refresh Finder icon cache
+  touch "$app"
   echo "created $app"
 }
 
-cleanup_all_channel_shortcuts() {
+# Remove obsolete hub/tutorial/channel preseeds (keep user first-use shortcuts tracked separately)
+cleanup_obsolete() {
   local dest="$1"
-  # Remove pre-seeded / legacy channel icons (kept list is only hub + tutorial)
   rm -rf \
-    "$dest/Codex → OpenAI.app" \
-    "$dest/Codex → Grok.app" \
-    "$dest/Codex → API合集.app" \
-    "$dest/Codex → Claude.app" \
-    "$dest/Codex → DeepSeek.app" \
-    "$dest/Codex → Gemini.app" \
-    "$dest/Codex → claude-opus.app" \
-    "$dest/Codex → deepseek-r1.app" \
+    "$dest/Codex 使用教程.app" \
+    "$dest/Codex→使用教程.app" \
     2>/dev/null || true
-  rm -f "$dest"/Codex*.command "$dest"/Codex→*.command 2>/dev/null || true
+  rm -f "$dest"/Codex*.command 2>/dev/null || true
 }
 
 for dest in "${DESTS[@]}"; do
   mkdir -p "$dest"
-  # Do NOT wipe user-created channel shortcuts on reinstall — only remove if KY_CODEX_RESET_SHORTCUTS=1
-  if [[ "${KY_CODEX_RESET_SHORTCUTS:-0}" == "1" ]]; then
-    cleanup_all_channel_shortcuts "$dest"
-  else
-    # still remove old .command clutter
-    rm -f "$dest"/Codex*.command 2>/dev/null || true
-  fi
+  cleanup_obsolete "$dest"
   make_app "Codex 切换模型" "pick" "$dest"
-  make_app "Codex 使用教程" "tutorial" "$dest"
 done
 
-echo "Hub apps ready. Channel shortcuts appear after first successful switch."
+echo "Hub app ready (tutorial lives inside the menu)."

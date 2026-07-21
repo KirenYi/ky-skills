@@ -127,6 +127,23 @@
       "start_proxy": null,
       "desktop_app": true,
       "tutorial": "index.html#openrouter"
+    },
+    "relay": {
+      "label": "⑤ 中转站 / 自定义 API（填 base_url + Key）",
+      "description": "任意 OpenAI 兼容中转（Claude 等）；首次弹窗填地址、Key、模型名",
+      "model": "gpt-4o",
+      "model_provider": "relay",
+      "model_reasoning_effort": "high",
+      "service_tier": null,
+      "model_catalog_json": null,
+      "requires_env": [
+        "RELAY_API_KEY",
+        "RELAY_BASE_URL"
+      ],
+      "requires_files": [],
+      "start_proxy": "relay",
+      "desktop_app": true,
+      "tutorial": "index.html#relay"
     }
   },
   "providers": {
@@ -151,6 +168,13 @@
     "deepseek": {
       "name": "DeepSeek (official key)",
       "base_url": "http://127.0.0.1:18766/v1",
+      "wire_api": "responses",
+      "env_key": null,
+      "supports_websockets": false
+    },
+    "relay": {
+      "name": "中转站 / 自定义 API",
+      "base_url": "http://127.0.0.1:18767/v1",
       "wire_api": "responses",
       "env_key": null,
       "supports_websockets": false

@@ -26,9 +26,13 @@ install_bin codex-provider
 install_bin codex-provider-app-run
 install_bin ensure-desktop-shortcut.sh
 install_bin deepseek-proxy
+install_bin relay-proxy
 cp "$SCRIPTS/sync-openrouter-bearer.py" "$BIN/sync-openrouter-bearer.py"
 chmod 700 "$BIN/sync-openrouter-bearer.py"
 cp "$SCRIPTS/profiles.json" "$CODEX_HOME/ky-profiles.json"
+if [[ -f "$SCRIPTS/assets/CodexSwitch.icns" ]]; then
+  cp "$SCRIPTS/assets/CodexSwitch.icns" "$BIN/CodexSwitch.icns"
+fi
 echo "installed $CODEX_HOME/ky-profiles.json"
 cp "$SCRIPTS/generate-catalog.py" "$BIN/generate-catalog.py" 2>/dev/null || true
 chmod 700 "$BIN/generate-catalog.py" 2>/dev/null || true
@@ -128,10 +132,9 @@ echo "Profiles:"
 KY_CODEX_PROFILES="$CODEX_HOME/ky-profiles.json" "$BIN/codex-provider" list
 echo
 echo "Next (simple):"
-echo "  • Desktop only has 2 icons: 「Codex 切换模型」+「Codex 使用教程」"
-echo "  • First time you pick Grok/DeepSeek/... → auto-creates that shortcut on Desktop"
-echo "  • Later: click the shortcut to switch in one tap"
-echo "  • First API use: dialog for OpenRouter key + tutorial button"
+echo "  • Desktop: only 「Codex 切换模型」(designed icon); tutorial is inside the menu"
+echo "  • First pick of a channel → auto desktop shortcut for that channel"
+echo "  • DeepSeek: official key | Claude/Gemini: OpenRouter | 中转站: base_url+key+model"
 echo "  • After switch: always NEW chat in Codex"
 echo
 KY_CODEX_PROFILES="$CODEX_HOME/ky-profiles.json" "$BIN/codex-provider" status || true

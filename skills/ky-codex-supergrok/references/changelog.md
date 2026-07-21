@@ -1,3 +1,9 @@
+## 0.6.0 — 2026-07-21
+
+- 桌面仅主入口「Codex 切换模型」+ 设计图标；教程改菜单内打开
+- 新增中转站/自定义 API（弹窗填 base_url + Key + 模型）
+- relay-proxy 协议桥兼容 OpenAI Chat Completions 中转
+
 ## 0.5.1 — 2026-07-21
 
 - 菜单/教程/README 统一数字标注：①官方 ②Grok ③DeepSeek官网 ④OpenRouter

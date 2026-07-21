@@ -11,6 +11,7 @@
 | ② SuperGrok（X 订阅） | `grok login` | API Key |
 | ③ DeepSeek … **← 官网 Key** | [DeepSeek 控制台](https://platform.deepseek.com/api_keys) 的 Key | OpenRouter Key |
 | ④ OpenRouter / Claude / Gemini | [OpenRouter](https://openrouter.ai/keys) 的 `sk-or-v1-…` | DeepSeek 官网 Key |
+| ⑤ 中转站 / 自定义 API | 中转站 Base URL + Key + 模型名 | 乱填无关 Key |
 
 一句话：**DeepSeek 看「官网 Key」；Claude/Gemini 看「OpenRouter」。**
 
@@ -26,18 +27,14 @@ bash skills/ky-codex-supergrok/scripts/install.sh
 
 ### 2. 日常怎么点（桌面不堆图标）
 
-默认桌面**只有 2 个**：
+默认桌面**只有 1 个主图标**（带设计图标）：
 
 | 图标 | 作用 |
 |------|------|
-| **Codex 切换模型** | 主界面，选通道 |
-| **Codex 使用教程** | 不会用就点 |
+| **Codex 切换模型** | 主菜单选通道；第一项可打开教程网页 |
 
-**第一次**在主界面选中并成功配置某个通道（例如 Grok）后，会**自动**在桌面生成：
+**第一次**选中某通道并成功后，才自动生成 `Codex → 该通道` 快捷方式。
 
-`Codex → Grok`
-
-之后日常直接点这个快捷方式秒切；没选过的通道不会出现在桌面。
 
 ### 3. 第一次用 DeepSeek / Claude？
 
@@ -52,7 +49,7 @@ Key 只存本机 `~/.codex/ky-provider.env`。
 
 ### 4. 不会用？
 
-双击 **「Codex 使用教程」**，或：
+在切换菜单选「不会使用？打开教程」，或：
 
 ```bash
 ~/.codex/bin/codex-provider tutorial

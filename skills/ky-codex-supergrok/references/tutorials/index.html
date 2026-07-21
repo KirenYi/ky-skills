@@ -37,6 +37,7 @@
     <a href="#grok">配置 SuperGrok</a>
     <a href="#switch">怎么切换</a>
     <a href="#deepseek">DeepSeek 官网 Key</a>
+    <a href="#relay">中转站 API</a>
     <a href="#faq">常见问题</a>
   </nav>
 
@@ -104,6 +105,18 @@ chmod 600 ~/.codex/ky-provider.env</pre>
   </ol>
   <div class="card">
     <p><strong>注意：</strong>DeepSeek 官网 Key 与 OpenRouter 的 <code>sk-or-v1-...</code> 不是同一种。Claude/Gemini 仍用 OpenRouter；DeepSeek 用官网 Key。</p>
+  </div>
+
+  
+  <h2 id="relay">配置中转站 / 自定义 API（Claude 等）</h2>
+  <ol class="steps">
+    <li class="step">在菜单选 <strong>⑤ 中转站 / 自定义 API</strong>。</li>
+    <li class="step">按提示填写：Base URL（如 <code>https://你的中转.com/v1</code>）、API Key、默认模型名（按中转站文档，如 <code>claude-sonnet-4</code>）。</li>
+    <li class="step">本机保存到 <code>~/.codex/ky-provider.env</code>，并启动本地协议桥（兼容 Codex Responses）。</li>
+    <li class="step">完全退出并重开 Codex，新建对话测试。</li>
+  </ol>
+  <div class="card">
+    <p><strong>说明：</strong>中转站只要提供 OpenAI 兼容的 Chat Completions（/v1/chat/completions）即可。Claude / GPT / DeepSeek 等由中转站侧决定，模型名填他们给你的那个字符串。</p>
   </div>
 
   <h2 id="faq">常见问题</h2>

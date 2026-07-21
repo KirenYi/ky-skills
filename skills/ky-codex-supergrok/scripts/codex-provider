@@ -195,6 +195,111 @@ sync_openrouter_bearer_to_config() {
   done
 }
 
+ensure_relay_config_interactive() {
+  # Need RELAY_BASE_URL + RELAY_API_KEY (+ optional RELAY_MODEL)
+  if [[ -f "$ENV_FILE" ]]; then set -a; source "$ENV_FILE" || true; set +a; fi
+  if [[ -n "${RELAY_BASE_URL:-}" && -n "${RELAY_API_KEY:-}" ]]; then
+    return 0
+  fi
+  if ! command -v osascript >/dev/null; then
+    echo "请在 $ENV_FILE 配置 RELAY_BASE_URL 与 RELAY_API_KEY" >&2
+    return 1
+  fi
+
+  local btn
+  btn=$(osascript <<'APPLESCRIPT' 2>/dev/null || true
+set btn to button returned of (display alert "配置中转站 / 自定义 API" message "很多中转站用 OpenAI 兼容接口付费调用 Claude 等模型。
+
+需要填写：
+1) Base URL（如 https://xxx.com/v1）
+2) API Key
+3) 默认模型名（如 claude-sonnet-4 / gpt-4o）
+
+可先点「查看教程」。" buttons {"取消", "查看教程", "开始填写"} default button "开始填写")
+return btn
+APPLESCRIPT
+)
+  case "$btn" in
+    取消|"") return 1 ;;
+    查看教程) open_tutorial "index.html#relay"; return 1 ;;
+  esac
+
+  local base key model
+  base=$(osascript <<'APPLESCRIPT' 2>/dev/null || true
+set r to display dialog "① Base URL（中转站地址）
+示例：https://api.example.com/v1
+不要漏掉 https:// ，一般以 /v1 结尾" default answer "https://" buttons {"取消", "下一步"} default button "下一步" with title "中转站 Base URL"
+if button returned of r is "取消" then return ""
+return text returned of r
+APPLESCRIPT
+)
+  [[ -z "${base:-}" ]] && return 1
+  key=$(osascript <<'APPLESCRIPT' 2>/dev/null || true
+set r to display dialog "② API Key（中转站密钥）" default answer "" buttons {"取消", "下一步"} default button "下一步" with title "中转站 API Key"
+if button returned of r is "取消" then return ""
+return text returned of r
+APPLESCRIPT
+)
+  [[ -z "${key:-}" ]] && return 1
+  model=$(osascript <<'APPLESCRIPT' 2>/dev/null || true
+set r to display dialog "③ 默认模型名（按中转站文档填写）
+示例：claude-sonnet-4  或  gpt-4o  或  deepseek-chat" default answer "gpt-4o" buttons {"取消", "保存并切换"} default button "保存并切换" with title "默认模型"
+if button returned of r is "取消" then return ""
+return text returned of r
+APPLESCRIPT
+)
+  [[ -z "${model:-}" ]] && model="gpt-4o"
+
+  base=$(echo "$base" | tr -d '[:space:]')
+  key=$(echo "$key" | tr -d '[:space:]')
+  model=$(echo "$model" | tr -d '[:space:]')
+
+  umask 077
+  touch "$ENV_FILE"
+  RELAY_BASE_URL_SAVE="$base" RELAY_API_KEY_SAVE="$key" RELAY_MODEL_SAVE="$model" ENV_FILE_SAVE="$ENV_FILE" python3 - <<'PY'
+import os
+from pathlib import Path
+path = Path(os.environ["ENV_FILE_SAVE"])
+pairs = {
+    "RELAY_BASE_URL": os.environ["RELAY_BASE_URL_SAVE"],
+    "RELAY_API_KEY": os.environ["RELAY_API_KEY_SAVE"],
+    "RELAY_MODEL": os.environ["RELAY_MODEL_SAVE"],
+}
+lines = path.read_text().splitlines() if path.exists() else []
+keys = set(pairs)
+out = []
+for line in lines:
+    k = line.split("=", 1)[0] if "=" in line and not line.strip().startswith("#") else None
+    if k in keys:
+        out.append(f"{k}={pairs[k]}")
+        keys.remove(k)
+    else:
+        out.append(line)
+for k in keys:
+    out.append(f"{k}={pairs[k]}")
+path.write_text("\n".join(out) + "\n")
+path.chmod(0o600)
+PY
+  export RELAY_BASE_URL="$base" RELAY_API_KEY="$key" RELAY_MODEL="$model"
+  # update profile default model in ky-profiles for this machine
+  python3 - "$PROFILES_JSON" "$model" <<'PY'
+import json, sys
+from pathlib import Path
+p = Path(sys.argv[1]); model = sys.argv[2]
+d = json.loads(p.read_text())
+if "relay" in d.get("profiles", {}):
+    d["profiles"]["relay"]["model"] = model
+    p.write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n")
+PY
+  notify "中转站已保存" "地址与 Key 已写入本机，正在切换"
+  return 0
+}
+
+profile_requires_relay() {
+  python3 -c "import json;from pathlib import Path;p=json.loads(Path(r'''$PROFILES_JSON''').read_text())['profiles'].get('$1',{});print('yes' if p.get('start_proxy')=='relay' or p.get('model_provider')=='relay' else 'no')"
+}
+
+
 ensure_deepseek_key_interactive() {
   if [[ -n "${DEEPSEEK_API_KEY:-}" ]]; then return 0; fi
   if [[ -f "$ENV_FILE" ]]; then set -a; source "$ENV_FILE" || true; set +a; fi
@@ -468,6 +573,15 @@ start_proxy_if_needed() {
              "$BIN/deepseek-proxy" restart >/dev/null 2>&1 || true
     fi
   fi
+  if [[ "$need" == "relay" ]]; then
+    if [[ -f "$ENV_FILE" ]]; then set -a; source "$ENV_FILE" || true; set +a; fi
+    if [[ -x "$BIN/relay-proxy" ]]; then
+      env RELAY_BASE_URL="${RELAY_BASE_URL:-}" RELAY_API_KEY="${RELAY_API_KEY:-}" \
+        "$BIN/relay-proxy" start >/dev/null 2>&1 \
+        || env RELAY_BASE_URL="${RELAY_BASE_URL:-}" RELAY_API_KEY="${RELAY_API_KEY:-}" \
+             "$BIN/relay-proxy" restart >/dev/null 2>&1 || true
+    fi
+  fi
 }
 
 restart_desktop() {
@@ -496,6 +610,9 @@ cmd_use() {
   fi
 
   # interactive requirements
+  if [[ "$(profile_requires_relay "$pid")" == "yes" ]]; then
+    ensure_relay_config_interactive || exit 3
+  fi
   if [[ "$(profile_requires_deepseek "$pid")" == "yes" ]]; then
     ensure_deepseek_key_interactive || exit 3
   fi
@@ -511,6 +628,28 @@ cmd_use() {
   backup_config
   start_proxy_if_needed "$pid"
   apply_profile "$pid"
+  # relay: use user-configured model id
+  if [[ "$pid" == "relay" ]]; then
+    if [[ -f "$ENV_FILE" ]]; then set -a; source "$ENV_FILE" || true; set +a; fi
+    if [[ -n "${RELAY_MODEL:-}" ]]; then
+      python3 - "$CONFIG" "$RELAY_MODEL" <<'PY'
+import re, sys
+from pathlib import Path
+cfg, model = Path(sys.argv[1]), sys.argv[2]
+text = cfg.read_text()
+text2, n = re.subn(
+    r'(# --- codex-provider-switcher:begin ---.*?\n)model = "[^"]*"',
+    r'\1model = "%s"' % model.replace("\\", "\\\\").replace('"', ""),
+    text,
+    count=1,
+    flags=re.S,
+)
+if n:
+    cfg.write_text(text2)
+    print("relay model set to", model)
+PY
+    fi
+  fi
   local label
   label=$(python3 -c "import json;from pathlib import Path;print(json.loads(Path(r'''$PROFILES_JSON''').read_text())['profiles']['$pid']['label'])")
   restart_desktop
@@ -604,7 +743,8 @@ case "$cmd" in
     echo "env file: $ENV_FILE"
     ;;
   help) usage ;;
-  openai|grok|api|claude|claude-opus|deepseek|deepseek-r1|gemini)
+  custom) cmd_use relay ;;
+  openai|grok|api|claude|claude-opus|deepseek|deepseek-r1|gemini|relay)
     cmd_use "$cmd"
     ;;
   *)

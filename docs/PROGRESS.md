@@ -24,6 +24,13 @@
 
 ---
 
+## 2026-07-21 — Grok — 主图标设计 + 中转站 API + 去掉教程图标
+
+- **已完成**：仅保留「Codex 切换模型」主图标（.icns）；教程只在菜单；新增⑤中转站（base_url+key+model + relay-proxy）
+- **改动**：make-desktop-apps、build-app-icon、relay-proxy、profiles、tutorial/README
+
+---
+
 ## 2026-07-21 — Grok — 支持 DeepSeek 官网 API Key
 
 - **问题**：用户使用 DeepSeek 官网 Key，却走 OpenRouter → 401

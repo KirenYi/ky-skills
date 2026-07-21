@@ -32,6 +32,7 @@ m={
   'deepseek':'DeepSeek',
   'deepseek-r1':'DeepSeek R1',
   'gemini':'Gemini',
+  'relay':'中转站',
 }
 print(m.get(pid) or label.split('（')[0].split('(')[0].strip()[:16])
 ")
@@ -40,7 +41,9 @@ APP_NAME="Codex → ${short}"
 make_one() {
   local dest_root="$1"
   local app="$dest_root/${APP_NAME}.app"
-  mkdir -p "$app/Contents/MacOS"
+  mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+  ICON="$BIN/CodexSwitch.icns"
+  if [[ -f "$ICON" ]]; then cp "$ICON" "$app/Contents/Resources/AppIcon.icns"; fi
   # stable id from profile
   local bid="local.ky.codex.provider.shortcut.${PID}"
   cat > "$app/Contents/Info.plist" <<PLIST
@@ -52,8 +55,9 @@ make_one() {
   <key>CFBundleIdentifier</key><string>${bid}</string>
   <key>CFBundleName</key><string>${APP_NAME}</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>4.0</string>
-  <key>LSUIElement</key><true/>
+  <key>CFBundleShortVersionString</key><string>5.0</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>LSUIElement</key><false/>
 </dict>
 </plist>
 PLIST
