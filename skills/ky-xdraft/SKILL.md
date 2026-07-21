@@ -1,37 +1,74 @@
 ---
 name: ky-xdraft
 description: |
-  Markdown 上传为 X 长文草稿（默认不发布）。
-  触发：/ky-xdraft、「X 草稿」「X Article」「上 X 长文」
+  指导把本地 Markdown 写成 X 长文草稿（默认不发布）。
+  触发：/ky-xdraft、「X 草稿」「X 长文」
 ---
 
 # ky-xdraft · X 长文草稿
 
-**核心：本地 Markdown → X Articles 草稿。**
+**核心：本地 Markdown → X 上的文章草稿（不自动公开发布）。**
+
+本 skill 提供 **KY 自有流程说明**，帮助 Agent 检查文稿并引导你在 X 网页完成草稿。  
+**默认不点击「发布」**，除非你明确授权。
 
 ## 硬规则
 
-- **不点「发布」**，除非用户明确确认  
-- 独立 Playwright 浏览器；临时 cookies，用完删除  
+1. 未获你明确说「可以发布」→ **绝不发布**。  
+2. 不保存、不提交你的账号密码或长期 cookies 到仓库。  
+3. 不把第三方项目的安装包或脚本冒充为本 skill 的「官方组件」。  
 
-## 用法
+## 文稿检查（Agent 先做）
 
-```bash
-pip install playwright pycryptodome
-python -m playwright install chromium
+打开用户给的 Markdown，检查：
 
-python3 "$SKILL_ROOT/scripts/export_x_cookies_from_chrome.py" --output /tmp/x_cookies.json
-python3 "$SKILL_ROOT/scripts/upload_markdown_to_x_article.py" "/abs/article.md" \
-  --cookies-json /tmp/x_cookies.json --dry-run
-python3 "$SKILL_ROOT/scripts/upload_markdown_to_x_article.py" "/abs/article.md" \
-  --cookies-json /tmp/x_cookies.json
-rm -f /tmp/x_cookies.json
+| 项 | 建议 |
+|----|------|
+| 标题 | 有清晰 H1 或首行标题 |
+| 封面 | 文首最好有一张图（X 长文封面习惯） |
+| 结构 | 段落完整，少残留未渲染标记 |
+| 敏感 | 无误贴密钥、未脱敏隐私 |
+
+有问题先改稿，再进入上传步骤。
+
+## 创建草稿（由你在浏览器完成，或本机自动化）
+
+### 路径 A — 手动（默认、最稳）
+
+1. 浏览器登录 X  
+2. 打开写文章 / Articles 入口（以当前 X 界面为准）  
+3. 新建草稿  
+4. 粘贴标题与正文；封面图按 X 界面上传  
+5. 确认保存为**草稿**  
+6. 把草稿链接或截图发回 Agent 做核对（可选）  
+
+### 路径 B — 本机自动化（可选）
+
+若你本机**自己维护** Playwright 等脚本，Agent 可以：
+
+- 帮你改脚本参数（Markdown 路径、是否 dry-run）  
+- 提醒：临时 cookie 用完删除  
+- **脚本代码不由本仓库冒充第三方成品拷贝分发**；需要自动化时以你本机脚本为准，或后续 KY 自研脚本单独版本发布  
+
+当前仓库以 **路径 A 流程** 为默认交付，保证不依赖、不夹带他人实现。
+
+## 完成后对用户说
+
+```text
+草稿流程已走完（或卡在哪一步）。
+请在 X 草稿箱确认内容。
+未授权前我不会执行「发布」。
 ```
 
-建议正文**第一张有效内容是封面图**；否则 dry-run 停下。
-
-## 完成
+## 完成输出
 
 ```markdown
-## ky-xdraft | 草稿 URL | cookies 已删?
+## ky-xdraft
+
+| 项 | 内容 |
+|----|------|
+| 文稿 | 路径 |
+| 检查 | 通过 / 待改 |
+| 草稿 | 已创建 / 待你在浏览器完成 |
+| 发布 | 未做（默认） |
 ```

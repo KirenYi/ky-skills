@@ -9,23 +9,26 @@ description: |
 
 **核心：笔记链接 → 本地目录。**
 
+脚本由 KY 维护：`scripts/fetch.py`。
+
 ## 用法
 
-1. 尽量用带 `xsec_token` 的完整链接  
+1. 尽量使用带访问参数的完整链接  
 2. 立刻跑脚本  
 
 ```bash
 pip install requests
 python3 "$SKILL_ROOT/scripts/fetch.py" "URL"
 python3 "$SKILL_ROOT/scripts/fetch.py" "URL" --skip-media
-# 可选：export XHS_COOKIE='...'  （勿提交 git）
 ```
 
+可选：`export XHS_COOKIE='...'`（仅进程内，勿提交 Git）。  
 默认输出：`~/Downloads/xhs_<note_id>/`
 
 ## 限制
 
-风控时需 Cookie；直链会过期。仅合法个人存档。
+- 页面结构或风控变化时可能失败。  
+- 仅合法范围内的个人存档。  
 
 ## 完成
 

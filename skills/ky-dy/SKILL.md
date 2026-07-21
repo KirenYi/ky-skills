@@ -9,10 +9,12 @@ description: |
 
 **核心：抖音链接 → 本地 MP4。**
 
+脚本由 KY 维护：`scripts/download.py`。
+
 ## 用法
 
-1. 用户给链接（短链先展开为 `www.douyin.com/video/<id>`）  
-2. 立刻执行脚本，不要空谈  
+1. 用户给链接（`v.douyin.com` 短链先展开为 `www.douyin.com/video/<id>`）  
+2. 立刻执行，不要空谈  
 
 ```bash
 pip install playwright requests
@@ -22,11 +24,13 @@ python3 "$SKILL_ROOT/scripts/download.py" "URL" --metadata-only
 ```
 
 `SKILL_ROOT` = 本文件所在目录。  
-默认输出：`~/Downloads/douyin_<id>.mp4` + `*.metadata.json`
+默认：`~/Downloads/douyin_<id>.mp4` 与旁路 `*.metadata.json`。
 
 ## 限制
 
-风控/版权可能失败；仅合法个人存档。不做转写。
+- 风控、版权、地区限制可导致失败。  
+- 仅合法范围内的个人存档。  
+- 不做口播转写（另工具处理）。  
 
 ## 完成
 

@@ -1,5 +1,31 @@
 # ky-sph
 
-视频号下载 / 公众号 RSS 工作流。编排 [wx_channels_download](https://github.com/ltaoo/wx_channels_download)。
+视频号 / 公众号**原料整理** skill。
 
-Agent：`/ky-sph`
+## 核心
+
+你提供本地文件或文案 → Agent 按约定登记入库，并给出转写/蒸馏下一步。
+
+## 不是什么
+
+- 不是微信官方工具  
+- **不内置、不捆绑**任何第三方下载软件  
+- 不代替你在微信客户端里点选、保存  
+
+## 用法
+
+Agent 中：
+
+```text
+/ky-sph
+我有一段视频号口播文案，帮我入库
+```
+
+或给出本地路径：
+
+```text
+/ky-sph
+视频在 D:\clips\xxx.mp4，作者 xxx
+```
+
+详见 `SKILL.md`。

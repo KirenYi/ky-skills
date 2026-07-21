@@ -1,13 +1,9 @@
-# Third-party notices
+# 说明
 
-## ltaoo/wx_channels_download
+本仓库（ky-skills）中的 skill 文案与随附脚本由 **Kiren Yi / KY** 维护，以 [MIT](./LICENSE) 许可发布。
 
-- https://github.com/ltaoo/wx_channels_download  
-- Used by **ky-sph** (workflow only; binary not vendored)
+- 不声称与任何平台官方有关联。  
+- 不在 README 或 skill 中把第三方开源项目宣称为「本产品组件」或强制安装依赖。  
+- 平台名称（X、抖音、小红书、微信等）仅为描述使用场景，商标归权利人所有。  
 
-## Capture techniques
-
-- **ky-dy** / **ky-xhs**: original KY scripts (MIT). Common browser-assist patterns.  
-- **ky-xdraft**: Playwright UI automation for X Articles drafts.
-
-Trademarks belong to their owners. Not affiliated with X / Douyin / Xiaohongshu / WeChat / Tencent.
+若你在个人环境中使用其他开源工具辅助工作，请自行遵守其许可证与免责声明；**那些工具不属于本仓库发行物**。
