@@ -16,3 +16,9 @@ data-archive/
 data/
 **/.ky-x/
 **/.x-thought-archive/
+**/cookies.json
+**/*cookies*.json
+**/x_current_cookies.json
+**/x_article_*.json
+**/x_article_*.txt
+**/x_article_*.png

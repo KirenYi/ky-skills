@@ -1,90 +1,95 @@
 # ky-skills
 
-一组可安装到 Agent 工具中的实用 Skills。目前提供 X（Twitter）公开帖子本地归档和微信公众号 HTML 排版能力。
+Kiren Yi（KY）的 Agent Skill 集合。前缀统一为 `ky-`，可安装到 Claude Code、Codex、Grok、Trae 等支持 Skills 的工具。
 
 ## 能做什么
 
 | Skill | 功能 |
 |-------|------|
-| [`ky-x`](./skills/ky-x/) | 按账号增量归档 X 公开帖子，保存为本地 Markdown 与 JSONL |
-| [`ky-wechat-html`](./skills/ky-wechat-html/) | 将 Markdown 转成可复制到微信公众号后台的单文件 HTML |
-
-这些 Skills 可安装到 Claude Code、Codex、Grok、Trae 等支持 Skills 的 Agent 工具中，也可以直接使用其中的命令行脚本。
+| [`ky-x`](./skills/ky-x/) | 按账号增量归档 X 公开帖（Markdown + JSONL） |
+| [`ky-wechat-html`](./skills/ky-wechat-html/) | Markdown → 微信公众号可粘贴 HTML |
+| [`ky-douyin`](./skills/ky-douyin/) | 下载抖音公开视频 + 元数据 |
+| [`ky-xhs`](./skills/ky-xhs/) | 抓取小红书公开笔记（视频/图文/字幕） |
+| [`ky-wx-channels`](./skills/ky-wx-channels/) | 微信视频号 / 公众号获取工作流（编排开源下载器） |
+| [`ky-x-article`](./skills/ky-x-article/) | Markdown → X Articles **草稿**（默认不发布） |
 
 ## 环境要求
 
-- macOS / Linux（Windows 可使用 WSL）
-- Python 3.10+（仅 `ky-x` 命令行功能需要）
+- macOS / Linux / Windows
+- Python 3.10+（多数带脚本的 skill 需要）
 - 支持 Skills 的 Agent 工具
 
-`ky-x` 仅使用 Python 标准库，默认无需申请 X API。
+部分 skill 额外依赖见各自 README（如 Playwright、微信 PC 上游工具）。
 
 ## 安装
 
-直接把这句话发给 Codex、Claude Code 或其他 Agent：
+把下面这句话发给 Agent：
 
 ```text
 帮我安装这里的 Skills：https://github.com/KirenYi/ky-skills
 ```
 
-安装完成后重启 Agent，就可以使用了。
-
-如果 Agent 无法安装，再打开终端运行：
+或终端：
 
 ```bash
-curl -fsSL https://github.com/KirenYi/ky-skills/raw/main/install.sh|bash
+curl -fsSL https://github.com/KirenYi/ky-skills/raw/main/install.sh | bash
 ```
 
-## 使用 ky-x
+Windows 可先 `git clone` 再执行：
 
-在已安装的 Agent 中输入：
+```bash
+./scripts/install-links.sh
+```
+
+安装后重启 Agent，使用 `/ky-x`、`/ky-douyin`、`/ky-xhs` 等命令。
+
+## 快速示例
+
+### ky-x
 
 ```text
 /ky-x
 归档 @naval 的公开帖子
 ```
 
-也可以直接使用命令行：
+### ky-douyin
 
 ```bash
-export PYTHONPATH=~/.ky-skills/skills/ky-x/scripts
-
-python3 -m xarchive init -c ~/.ky-x/config.json
-python3 -m xarchive add naval -c ~/.ky-x/config.json
-python3 -m xarchive sync --handle naval -c ~/.ky-x/config.json
-python3 -m xarchive status -c ~/.ky-x/config.json
+pip install playwright requests && python -m playwright install chromium
+python3 skills/ky-douyin/scripts/download.py "https://www.douyin.com/video/<id>"
 ```
 
-归档结果保存在：
+### ky-xhs
+
+```bash
+pip install requests
+python3 skills/ky-xhs/scripts/fetch.py "https://www.xiaohongshu.com/explore/<id>?xsec_token=..."
+```
+
+### ky-wx-channels
+
+安装 [wx_channels_download](https://github.com/ltaoo/wx_channels_download) 后，在 Agent 中输入 `/ky-wx-channels` 按流程操作。
+
+### ky-x-article
 
 ```text
-~/.ky-x/data/library/<handle>/_index.md
-~/.ky-x/data/library/<handle>/YYYY-MM.md
-~/.ky-x/data/data/@<handle>.jsonl
+/ky-x-article
+把 article.md 上传为 X 长文草稿
 ```
 
-`ky-x` 支持多账号增量同步，可过滤转推和回复。默认数据源为公开 RSS 镜像，通常只能获取最近一部分帖子，无法保证完整历史或持续可用。
-
-详细说明见 [`skills/ky-x/README.md`](./skills/ky-x/README.md)。
-
-## 使用 ky-wechat-html
-
-在已安装的 Agent 中输入：
+### ky-wechat-html
 
 ```text
 /ky-wechat-html
 把 article.md 排成微信公众号 HTML
 ```
 
-它只负责排版，不改写文章观点或文案。生成的 HTML 可在浏览器中打开并复制到微信公众号后台。
+## 数据与限制
 
-详细说明见 [`skills/ky-wechat-html/README.md`](./skills/ky-wechat-html/README.md)。
-
-## 数据与使用限制
-
-- `ky-x` 只处理公开帖子，用户配置和归档默认保存在本机 `~/.ky-x/`，不会写入本仓库。
-- 请遵守平台服务条款、内容权利和当地法律，仅在合法范围内使用。
-- 不要将 Cookie、Token、私有配置或个人归档提交到 Git。
+- 用户运行时数据（如 `~/.ky-x/`、临时 cookies）保存在本机，**不要提交 Git**。
+- 平台接口与风控会变；文档中的限制请如实遵守。
+- 仅在合法范围内用于个人学习与创作工作流。
+- 详见 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md)。
 
 ## License
 

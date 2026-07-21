@@ -24,6 +24,34 @@
 
 ---
 
+## 2026-07-20 — Grok — 新增媒体抓取与 X 草稿四 skill 并准备推送
+
+- **操作者**：Grok
+- **目标**：将抖音 / 小红书 / 视频号 / X Article 草稿能力沉淀为正式 `ky-*` skill，并入 ky-skills 真源后推送 GitHub
+- **已完成**：
+  - 新增 `ky-douyin`（Playwright 拦截下载 + metadata）
+  - 新增 `ky-xhs`（INITIAL_STATE 抓取 + 媒体）
+  - 新增 `ky-wx-channels`（编排 wx_channels_download 工作流）
+  - 新增 `ky-x-article`（Markdown → X Articles 草稿）
+  - 更新根 README、VERSION 0.4.0、AGENTS、install.sh 提示、THIRD_PARTY_NOTICES
+- **改动路径**：
+  - `skills/ky-douyin/**`
+  - `skills/ky-xhs/**`
+  - `skills/ky-wx-channels/**`
+  - `skills/ky-x-article/**`
+  - `README.md`、`VERSION`、`AGENTS.md`、`install.sh`、`THIRD_PARTY_NOTICES.md`、`docs/PROGRESS.md`
+- **验证**：
+  - `python -m py_compile` 对新脚本（若环境有 Python）
+  - `git status` 确认仅相关文件
+- **未完成 / 下一步**：
+  - `git push` 到 `KirenYi/ky-skills`（本轮执行）
+  - 用户本机 `./scripts/install-links.sh` 刷新软链
+- **风险或注意**：
+  - 平台抓取随时可能被风控；文档已写诚实限制
+  - 勿提交 cookies / 用户数据
+
+---
+
 ## 2026-07-19 07:23 PDT — Codex — 增加一行命令安装入口
 
 - **操作者**：Codex
