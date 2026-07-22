@@ -36,7 +36,7 @@ def main() -> int:
         "request_max_retries = 4\n"
         "stream_idle_timeout_ms = 600000\n"
         'http_headers = { "HTTP-Referer" = "https://github.com/KirenYi/ky-skills", '
-        '"X-Title" = "ky-codex-supergrok" }\n'
+        '"X-Title" = "ky-codex-switch" }\n'
     )
 
     text = cfg_path.read_text() if cfg_path.exists() else ""

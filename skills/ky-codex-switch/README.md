@@ -1,4 +1,4 @@
-# ky-codex-supergrok
+# ky-codex-switch
 
 让 **Codex 换模型尽量像点按钮一样简单**。
 
@@ -20,10 +20,10 @@
 ### 1. 安装一次
 
 ```bash
-bash skills/ky-codex-supergrok/scripts/install.sh
+bash skills/ky-codex-switch/scripts/install.sh
 ```
 
-或在 Agent 里：`/ky-codex-supergrok` → 帮我安装。
+或在 Agent 里：`/ky-codex-switch` → 帮我安装。
 
 ### 2. 日常怎么点（桌面不堆图标）
 

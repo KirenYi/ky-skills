@@ -1,19 +1,26 @@
 ---
-name: ky-codex-supergrok
+name: ky-codex-switch
 description: |
-  Codex 多模型「尽量一键」：SuperGrok 订阅、OpenAI 官方、Claude/DeepSeek/Gemini（OpenRouter）。
-  首次缺 API 时弹窗填 Key，并提供「查看教程 / 不会使用怎么办」图文指南。
-  触发：/ky-codex-supergrok、「Codex 切换模型」「Codex 教程」「DeepSeek 怎么配」「不会使用怎么办」
+  Codex 模型/通道一键切换：OpenAI 官方、SuperGrok 订阅、DeepSeek 官网 Key、OpenRouter、中转站 API。
+  首次缺 Key 弹窗引导；菜单内教程；桌面按需生成快捷方式。
+  触发：/ky-codex-switch、「Codex 切换」「Codex 换模型」「切换 Grok」「DeepSeek 接 Codex」「中转站 API」
+  One-click Codex model/channel switcher (SuperGrok, DeepSeek, OpenRouter, custom relay).
 ---
 
-# ky-codex-supergrok
+# ky-codex-switch
+
+> 命名：`ky-codex-` + 主功能 `switch`（切换）。旧名 `ky-codex-supergrok` 已弃用。
+
+
+
+
 
 目标：**用户越少思考越好**——点按钮切换；缺配置就弹窗 + 教程，而不是丢一堆命令。
 
 ## Agent 该做什么
 
 1. **安装/升级**：`bash "$SKILL_ROOT/scripts/install.sh"`
-2. **引导使用**：优先让用户双击 **Codex 切换模型** / **Codex 使用教程**
+2. **引导使用**：优先让用户双击 **Codex 切换模型**（教程在菜单第一项）
 3. **缺 Key**：说明会自动弹窗；也可 `codex-provider tutorial`
 4. **不要**默认要求用户手写复杂 config.toml
 
@@ -33,6 +40,7 @@ bash "$SKILL_ROOT/scripts/install.sh"
 | ② SuperGrok | grok login 订阅，无 Key |
 | ③ DeepSeek ← 官网 Key | platform.deepseek.com |
 | ④ OpenRouter / Claude / Gemini | openrouter.ai 的 sk-or-v1- |
+| ⑤ 中转站 | base_url + Key + 模型名 |
 
 ## 用户路径（请按此教）
 

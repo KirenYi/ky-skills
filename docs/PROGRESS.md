@@ -24,6 +24,16 @@
 
 ---
 
+## 2026-07-21 — Grok — Skill 更名 ky-codex-switch
+
+- **操作者**：Grok
+- **目标**：skill 命名改为 ky-codex- + 主功能「切换」
+- **已完成**：目录/文档/脚本路径全部更名为 ky-codex-switch；多端软链更新
+- **改动路径**：skills/ky-codex-switch/**、README、AGENTS
+- **注意**：旧名 ky-codex-supergrok 已废弃
+
+---
+
 ## 2026-07-21 — Grok — 官方 Codex 图标 + 误删可重生 + 清理桌面
 
 - 图标改用 ChatGPT 内置 icon-codex-dark-color
@@ -60,7 +70,7 @@
 - **操作者**：Grok
 - **目标**：桌面不预装一堆图标；首次选中通道后自动生成快捷方式
 - **已完成**：默认仅「切换模型」+「使用教程」；ensure-desktop-shortcut 在成功切换后创建 Codex → xxx
-- **改动路径**：skills/ky-codex-supergrok/scripts/*
+- **改动路径**：skills/ky-codex-switch/scripts/*
 - **验证**：use grok → 桌面出现 Codex → Grok
 - **下一步**：无
 
@@ -71,7 +81,7 @@
 - **操作者**：Grok
 - **目标**：桌面只保留最新 5 个入口
 - **已完成**：删除 Claude/DeepSeek/Gemini 等多余 App 与旧 .command；make-desktop-apps 同步
-- **改动路径**：本机 Desktop/Applications；skills/ky-codex-supergrok/scripts/make-desktop-apps.sh
+- **改动路径**：本机 Desktop/Applications；skills/ky-codex-switch/scripts/make-desktop-apps.sh
 - **验证**：ls Desktop Codex*
 - **下一步**：无
 
@@ -87,7 +97,7 @@
   - OpenRouter 多模型 catalog + `api` 合集 profile
   - pick 菜单增加教程入口；失败时引导教程
 - **改动路径**：
-  - `skills/ky-codex-supergrok/**`
+  - `skills/ky-codex-switch/**`
   - `docs/PROGRESS.md`、`VERSION`、根 `README`（若有）
 - **验证**：
   - bash -n / install 本地安装
@@ -97,7 +107,7 @@
 
 ---
 
-## 2026-07-21 08:10 PDT — Grok — ky-codex-supergrok 多模型一键切换
+## 2026-07-21 08:10 PDT — Grok — ky-codex-switch 多模型一键切换
 
 - **操作者**：Grok
 - **目标**：在 SuperGrok/OpenAI 之外加入 Claude、DeepSeek、Gemini 等一键切换
@@ -108,7 +118,7 @@
   - 密钥文件 `~/.codex/ky-provider.env` + 桌面多通道 App
   - 文档与 skill VERSION 0.2.0
 - **改动路径**：
-  - `skills/ky-codex-supergrok/**`
+  - `skills/ky-codex-switch/**`
   - `README.md`
   - `docs/PROGRESS.md`
   - `VERSION`
@@ -123,16 +133,16 @@
 
 ---
 
-## 2026-07-21 07:25 PDT — Grok — 新增 ky-codex-supergrok
+## 2026-07-21 07:25 PDT — Grok — 新增 ky-codex-switch
 
 - **操作者**：Grok
 - **目标**：把 Codex ↔ SuperGrok 订阅通道与一键切换做成可发布 skill
 - **已完成**：
-  - 新增 `skills/ky-codex-supergrok/`（SKILL/README/scripts/references）
+  - 新增 `skills/ky-codex-switch/`（SKILL/README/scripts/references）
   - 安装脚本：本地代理、token 刷新、config provider、macOS 桌面一键 App
   - 更新根 README skill 表与 AGENTS 已发布列表
 - **改动路径**：
-  - `skills/ky-codex-supergrok/**`
+  - `skills/ky-codex-switch/**`
   - `README.md`
   - `AGENTS.md`
   - `docs/PROGRESS.md`
@@ -140,7 +150,7 @@
 - **验证**：
   - `bash -n` 安装与切换脚本
   - `python3 -m py_compile` proxy/token
-  - `./scripts/install-links.sh --dry-run ky-codex-supergrok`
+  - `./scripts/install-links.sh --dry-run ky-codex-switch`
 - **未完成 / 下一步**：
   - 推送到 GitHub main
 - **风险或注意**：

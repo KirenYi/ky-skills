@@ -1,3 +1,7 @@
+## 0.7.0 — 2026-07-21
+
+- Skill 更名：`ky-codex-supergrok` → **`ky-codex-switch`**（突出「切换」能力）
+
 ## 0.6.1 — 2026-07-21
 
 - 使用官方 Codex 图标；误删通道快捷方式可再选通道重新生成
@@ -23,7 +27,7 @@
 - 桌面默认仅「切换模型」+「使用教程」
 - 首次成功切换某通道后自动生成「Codex → xxx」快捷方式
 
-# ky-codex-supergrok changelog
+# ky-codex-switch changelog
 
 ## 0.3.1 — 2026-07-21
 

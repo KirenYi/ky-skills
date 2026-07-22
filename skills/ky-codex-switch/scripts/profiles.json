@@ -162,7 +162,7 @@
       "supports_websockets": false,
       "http_headers": {
         "HTTP-Referer": "https://github.com/KirenYi/ky-skills",
-        "X-Title": "ky-codex-supergrok"
+        "X-Title": "ky-codex-switch"
       }
     },
     "deepseek": {

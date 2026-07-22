@@ -18,9 +18,9 @@ if [[ -z "$PROFILES_JSON" ]]; then
   for c in \
     "$CODEX_HOME/ky-profiles.json" \
     "$SCRIPT_DIR/profiles.json" \
-    "$HOME/.agents/skills/ky-codex-supergrok/scripts/profiles.json" \
-    "$HOME/.grok/skills/ky-codex-supergrok/scripts/profiles.json" \
-    "$HOME/.codex/skills/ky-codex-supergrok/scripts/profiles.json"
+    "$HOME/.agents/skills/ky-codex-switch/scripts/profiles.json" \
+    "$HOME/.grok/skills/ky-codex-switch/scripts/profiles.json" \
+    "$HOME/.codex/skills/ky-codex-switch/scripts/profiles.json"
   do
     [[ -f "$c" ]] && PROFILES_JSON="$c" && break
   done
@@ -31,9 +31,9 @@ fi
 TUTORIAL_DIR=""
 for d in \
   "$SCRIPT_DIR/../references/tutorials" \
-  "$HOME/.agents/skills/ky-codex-supergrok/references/tutorials" \
-  "$HOME/.grok/skills/ky-codex-supergrok/references/tutorials" \
-  "$HOME/.codex/skills/ky-codex-supergrok/references/tutorials" \
+  "$HOME/.agents/skills/ky-codex-switch/references/tutorials" \
+  "$HOME/.grok/skills/ky-codex-switch/references/tutorials" \
+  "$HOME/.codex/skills/ky-codex-switch/references/tutorials" \
   "$CODEX_HOME/ky-tutorials"
 do
   if [[ -f "$d/index.html" ]]; then TUTORIAL_DIR="$d"; break; fi
@@ -95,7 +95,7 @@ open_tutorial() {
   fi
   if [[ -z "$TUTORIAL_DIR" || ! -f "$TUTORIAL_DIR/index.html" ]]; then
     # fallback: open online github raw/blob
-    open "https://github.com/KirenYi/ky-skills/blob/main/skills/ky-codex-supergrok/references/tutorials/index.html" 2>/dev/null || true
+    open "https://github.com/KirenYi/ky-skills/blob/main/skills/ky-codex-switch/references/tutorials/index.html" 2>/dev/null || true
     echo "Opened online tutorial (local tutorials not found)"
     return
   fi
@@ -174,7 +174,7 @@ PY
       chmod 600 "$ENV_FILE"
     fi
   else
-    printf '# ky-codex-supergrok secrets — do not commit\nOPENROUTER_API_KEY=%s\n' "$key" >"$ENV_FILE"
+    printf '# ky-codex-switch secrets — do not commit\nOPENROUTER_API_KEY=%s\n' "$key" >"$ENV_FILE"
     chmod 600 "$ENV_FILE"
   fi
   export OPENROUTER_API_KEY="$key"
@@ -485,7 +485,7 @@ for pid, p in (prof.get("providers") or {}).items():
     marker = f"[model_providers.{pid}]"
     if marker in text:
         continue
-    block = [f"\n# --- ky-codex-supergrok provider: {pid} ---", marker,
+    block = [f"\n# --- ky-codex-switch provider: {pid} ---", marker,
              f'name = "{p["name"]}"', f'base_url = "{p["base_url"]}"',
              f'wire_api = "{p.get("wire_api","responses")}"']
     if p.get("env_key"):

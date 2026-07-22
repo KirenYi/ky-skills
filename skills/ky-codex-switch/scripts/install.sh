@@ -7,7 +7,7 @@ SCRIPTS="$SKILL_ROOT/scripts"
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 BIN="$CODEX_HOME/bin"
 
-echo "== ky-codex-supergrok install (multi-model) =="
+echo "== ky-codex-switch install (multi-model) =="
 echo "skill: $SKILL_ROOT"
 echo "codex home: $CODEX_HOME"
 
@@ -71,7 +71,7 @@ for pid, p in providers.items():
     marker = f"[model_providers.{pid}]"
     if marker in text:
         continue
-    block = [f"\n# --- ky-codex-supergrok provider: {pid} ---", marker, f'name = "{p["name"]}"', f'base_url = "{p["base_url"]}"', f'wire_api = "{p.get("wire_api","responses")}"']
+    block = [f"\n# --- ky-codex-switch provider: {pid} ---", marker, f'name = "{p["name"]}"', f'base_url = "{p["base_url"]}"', f'wire_api = "{p.get("wire_api","responses")}"']
     if p.get("env_key"):
         block.append(f'env_key = "{p["env_key"]}"')
     if p.get("supports_websockets") is False:
@@ -91,7 +91,7 @@ PY
 # env example
 if [[ ! -f "$CODEX_HOME/ky-provider.env" ]]; then
   cat > "$CODEX_HOME/ky-provider.env" <<'ENV'
-# ky-codex-supergrok secrets (chmod 600). Do NOT commit this file.
+# ky-codex-switch secrets (chmod 600). Do NOT commit this file.
 # OpenRouter unlocks Claude / DeepSeek / Gemini one-click profiles:
 #   https://openrouter.ai/keys
 # OPENROUTER_API_KEY=sk-or-v1-...

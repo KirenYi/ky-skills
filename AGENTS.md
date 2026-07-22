@@ -13,7 +13,7 @@
 
 `ky-skills` 是 **Kiren Yi 的个人 Agent Skill 集合**，不是单一脚本仓库。
 
-- 当前（v0.5.0）已发布：`ky-x`、`ky-dy`、`ky-xhs`、`ky-sph`、`ky-xdraft`、`ky-mphtml`、`ky-codex-supergrok`  
+- 当前（v0.5.0）已发布：`ky-x`、`ky-dy`、`ky-xhs`、`ky-sph`、`ky-xdraft`、`ky-mphtml`、`ky-codex-switch`  
 - 命名原则：**短命令 + description 只写核心能力**  
 - **对外表述**：只写 KY 自有能力与用法；禁止把第三方仓库写成「本 skill 组件 / 强制依赖」；借鉴方法论可以，挂靠、整包转贴、冒充自有实现不可以
 - 之后会有更多 `ky-*` skill，全部放在 `skills/` 下
